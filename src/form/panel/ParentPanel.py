@@ -27,7 +27,7 @@ class ParentPanel(BasePanel):
 
         self.header_sizer = wx.BoxSizer(wx.VERTICAL)
 
-        self.description_txt = wx.StaticText(self, wx.ID_ANY, u"全親を含むモーションを、全親の値をセンター上半身・下半身・足ＩＫに移植して、全親なしのモーションに変換します。", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.description_txt = wx.StaticText(self, wx.ID_ANY, u"全親を含むモーションを、全親の値をセンター・上半身・下半身・足ＩＫに移植して、全親なしのモーションに変換します。", wx.DefaultPosition, wx.DefaultSize, 0)
         self.header_sizer.Add(self.description_txt, 0, wx.ALL, 5)
 
         self.static_line01 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)

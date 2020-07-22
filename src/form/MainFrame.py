@@ -5,6 +5,7 @@ import sys
 import wx
 
 from form.panel.ParentPanel import ParentPanel
+from form.panel.NoisePanel import NoisePanel
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from utils import MFormUtils, MFileUtils # noqa
 from utils.MLogger import MLogger # noqa
@@ -70,6 +71,10 @@ class MainFrame(wx.Frame):
         # 全親タブ
         self.parent_panel_ctrl = ParentPanel(self, self.note_ctrl, 9)
         self.note_ctrl.AddPage(self.parent_panel_ctrl, u"全親", False)
+        
+        # ゆらぎタブ
+        self.noise_panel_ctrl = NoisePanel(self, self.note_ctrl, 9)
+        self.note_ctrl.AddPage(self.noise_panel_ctrl, u"ゆらぎ", False)
         
         # ---------------------------------------------
 

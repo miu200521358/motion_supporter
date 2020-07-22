@@ -12,7 +12,6 @@ from module.MOptions import MParentOptions, MOptionsDataSet
 from mmd.PmxData import PmxModel # noqa
 from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
 from mmd.VmdWriter import VmdWriter
-import module.MMath as MMath
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from utils import MUtils, MServiceUtils, MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
@@ -62,24 +61,26 @@ class ConvertParentService():
         parent_bone_name = "全ての親"
 
         for bone_name in ["センター", "右足ＩＫ", "左足ＩＫ"]:
-            links = model.create_link_2_top_one(bone_name)
-            fnos = motion.get_bone_fnos(bone_name)
-            for fno in fnos:
-                bf = motion.calc_bf(bone_name, fno)
-                global_3ds_dic = MServiceUtils.calc_global_pos(model, links, motion, fno)
-                bone_global_pos = global_3ds_dic[bone_name]
+            if bone_name in model.bones:
+                links = model.create_link_2_top_one(bone_name)
+                fnos = motion.get_bone_fnos(bone_name)
+                for fno in fnos:
+                    bf = motion.calc_bf(bone_name, fno)
+                    global_3ds_dic = MServiceUtils.calc_global_pos(model, links, motion, fno)
+                    bone_global_pos = global_3ds_dic[bone_name]
 
-                bf.position = bone_global_pos - model.bones[bone_name].position
-                motion.regist_bf(bf, bone_name, fno)
+                    bf.position = bone_global_pos - model.bones[bone_name].position
+                    motion.regist_bf(bf, bone_name, fno)
         
         for bone_name in ["上半身", "下半身", "右足ＩＫ", "左足ＩＫ"]:
-            links = model.create_link_2_top_one(bone_name)
-            fnos = motion.get_bone_fnos(bone_name)
-            for fno in fnos:
-                parent_bf = motion.calc_bf(parent_bone_name, fno)
-                bf = motion.calc_bf(bone_name, fno)
-                bf.rotation = parent_bf.rotation * bf.rotation
-                motion.regist_bf(bf, bone_name, fno)
+            if bone_name in model.bones:
+                links = model.create_link_2_top_one(bone_name)
+                fnos = motion.get_bone_fnos(bone_name)
+                for fno in fnos:
+                    parent_bf = motion.calc_bf(parent_bone_name, fno)
+                    bf = motion.calc_bf(bone_name, fno)
+                    bf.rotation = parent_bf.rotation * bf.rotation
+                    motion.regist_bf(bf, bone_name, fno)
 
         # 全ての親削除
         del motion.bones[parent_bone_name]
