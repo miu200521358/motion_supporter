@@ -6,6 +6,8 @@ import wx
 
 from form.panel.ParentPanel import ParentPanel
 from form.panel.NoisePanel import NoisePanel
+from form.panel.MultiSplitPanel import MultiSplitPanel
+from form.panel.IKtoFKPanel import IKtoFKPanel
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from utils import MFormUtils, MFileUtils # noqa
 from utils.MLogger import MLogger # noqa
@@ -75,6 +77,14 @@ class MainFrame(wx.Frame):
         # ゆらぎタブ
         self.noise_panel_ctrl = NoisePanel(self, self.note_ctrl, 9)
         self.note_ctrl.AddPage(self.noise_panel_ctrl, u"ゆらぎ", False)
+        
+        # 多段分割タブ
+        self.multi_sprit_panel_ctrl = MultiSplitPanel(self, self.note_ctrl, 9)
+        self.note_ctrl.AddPage(self.multi_sprit_panel_ctrl, u"多段分割", False)
+        
+        # IKtoFKタブ
+        self.ik2fk_panel_ctrl = IKtoFKPanel(self, self.note_ctrl, 9)
+        self.note_ctrl.AddPage(self.ik2fk_panel_ctrl, u"IKtoFK", False)
         
         # ---------------------------------------------
 

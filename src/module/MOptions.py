@@ -1,15 +1,5 @@
 # -*- coding: utf-8 -*-
 #
-import os
-import sys
-import argparse
-
-from mmd.PmxReader import PmxReader
-from mmd.VmdReader import VmdReader
-from mmd.VpdReader import VpdReader
-from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
-from utils import MFileUtils
-from utils.MException import SizingException
 from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__)
@@ -59,15 +49,51 @@ class MParentOptions():
 
 class MNoiseOptions():
 
-    def __init__(self, version_name, logging_level, max_workers, motion, model, noise_size, copy_cnt, output_path, monitor, is_file, outout_datetime):
+    def __init__(self, version_name, logging_level, max_workers, motion, model, noise_size, copy_cnt, \
+                 finger_noise_flg, output_path, monitor, is_file, outout_datetime):
         self.version_name = version_name
         self.logging_level = logging_level
         self.motion = motion
         self.model = model
         self.copy_cnt = copy_cnt
+        self.finger_noise_flg = finger_noise_flg
         self.noise_size = noise_size
         self.output_path = output_path
         self.monitor = monitor
         self.is_file = is_file
         self.outout_datetime = outout_datetime
         self.max_workers = max_workers
+
+
+class MIKtoFKOptions():
+
+    def __init__(self, version_name, logging_level, max_workers, motion, model, output_path, monitor, is_file, outout_datetime):
+        self.version_name = version_name
+        self.logging_level = logging_level
+        self.motion = motion
+        self.model = model
+        self.output_path = output_path
+        self.monitor = monitor
+        self.is_file = is_file
+        self.outout_datetime = outout_datetime
+        self.max_workers = max_workers
+
+
+class MMultiSplitOptions():
+
+    def __init__(self, version_name, logging_level, max_workers, motion, model, noise_size, copy_cnt, \
+                 finger_noise_flg, output_path, monitor, is_file, outout_datetime):
+        self.version_name = version_name
+        self.logging_level = logging_level
+        self.motion = motion
+        self.model = model
+        self.copy_cnt = copy_cnt
+        self.finger_noise_flg = finger_noise_flg
+        self.noise_size = noise_size
+        self.output_path = output_path
+        self.monitor = monitor
+        self.is_file = is_file
+        self.outout_datetime = outout_datetime
+        self.max_workers = max_workers
+
+

@@ -1,12 +1,8 @@
 # -*- coding: utf-8 -*-
 #
-import math
-import numpy as np
 import logging
 import os
 import traceback
-import concurrent.futures
-from concurrent.futures import ThreadPoolExecutor
 
 from module.MOptions import MParentOptions, MOptionsDataSet
 from mmd.PmxData import PmxModel # noqa
@@ -60,10 +56,18 @@ class ConvertParentService():
 
         parent_bone_name = "全ての親"
 
+        # 移動の移植
         for bone_name in ["センター", "右足ＩＫ", "左足ＩＫ"]:
             if bone_name in model.bones:
                 links = model.create_link_2_top_one(bone_name)
-                fnos = motion.get_bone_fnos(bone_name)
+                fnos = motion.get_bone_fnos(bone_name, parent_bone_name)
+
+                # まずキー登録
+                for fno in fnos:
+                    bf = motion.calc_bf(bone_name, fno)
+                    motion.regist_bf(bf, bone_name, fno)
+
+                # 移植
                 for fno in fnos:
                     bf = motion.calc_bf(bone_name, fno)
                     global_3ds_dic = MServiceUtils.calc_global_pos(model, links, motion, fno)
@@ -71,11 +75,19 @@ class ConvertParentService():
 
                     bf.position = bone_global_pos - model.bones[bone_name].position
                     motion.regist_bf(bf, bone_name, fno)
-        
+
+        # 回転の移植
         for bone_name in ["上半身", "下半身", "右足ＩＫ", "左足ＩＫ"]:
             if bone_name in model.bones:
                 links = model.create_link_2_top_one(bone_name)
-                fnos = motion.get_bone_fnos(bone_name)
+                fnos = motion.get_bone_fnos(bone_name, parent_bone_name)
+
+                # まずキー登録
+                for fno in fnos:
+                    bf = motion.calc_bf(bone_name, fno)
+                    motion.regist_bf(bf, bone_name, fno)
+
+                # 移植
                 for fno in fnos:
                     parent_bf = motion.calc_bf(parent_bone_name, fno)
                     bf = motion.calc_bf(bone_name, fno)
