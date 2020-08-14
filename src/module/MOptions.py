@@ -35,12 +35,13 @@ class MOptionsDataSet():
 
 class MParentOptions():
 
-    def __init__(self, version_name, logging_level, max_workers, motion, model, output_path, monitor, is_file, outout_datetime):
+    def __init__(self, version_name, logging_level, max_workers, motion, model, output_path, center_rotatation_flg, monitor, is_file, outout_datetime):
         self.version_name = version_name
         self.logging_level = logging_level
         self.motion = motion
         self.model = model
         self.output_path = output_path
+        self.center_rotatation_flg = center_rotatation_flg
         self.monitor = monitor
         self.is_file = is_file
         self.outout_datetime = outout_datetime
@@ -81,15 +82,12 @@ class MIKtoFKOptions():
 
 class MMultiSplitOptions():
 
-    def __init__(self, version_name, logging_level, max_workers, motion, model, noise_size, copy_cnt, \
-                 finger_noise_flg, output_path, monitor, is_file, outout_datetime):
+    def __init__(self, version_name, logging_level, max_workers, motion, model, target_bones, output_path, monitor, is_file, outout_datetime):
         self.version_name = version_name
         self.logging_level = logging_level
         self.motion = motion
         self.model = model
-        self.copy_cnt = copy_cnt
-        self.finger_noise_flg = finger_noise_flg
-        self.noise_size = noise_size
+        self.target_bones = target_bones
         self.output_path = output_path
         self.monitor = monitor
         self.is_file = is_file

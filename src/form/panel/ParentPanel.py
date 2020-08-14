@@ -34,9 +34,9 @@ class ParentPanel(BasePanel):
         self.header_sizer.Add(self.static_line01, 0, wx.EXPAND | wx.ALL, 5)
 
         # 対象VMDファイルコントロール
-        self.parent_vmd_file_ctrl = HistoryFilePickerCtrl(self.frame, self, u"対象モーションVMD", u"対象モーションVMDファイルを開く", ("vmd"), wx.FLP_DEFAULT_STYLE, \
+        self.parent_vmd_file_ctrl = HistoryFilePickerCtrl(self.frame, self, u"対象モーションVMD/VPD", u"対象モーションVMDファイルを開く", ("vmd", "vpd"), wx.FLP_DEFAULT_STYLE, \
                                                           u"調整したい対象モーションのVMDパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。", \
-                                                          file_model_spacer=0, title_parts_ctrl=None, title_parts2_ctrl=None, file_histories_key="parent_vmd", is_change_output=True, \
+                                                          file_model_spacer=46, title_parts_ctrl=None, title_parts2_ctrl=None, file_histories_key="parent_vmd", is_change_output=True, \
                                                           is_aster=False, is_save=False, set_no=1)
         self.header_sizer.Add(self.parent_vmd_file_ctrl.sizer, 1, wx.EXPAND, 0)
 
@@ -53,11 +53,16 @@ class ParentPanel(BasePanel):
                                                               is_aster=False, is_save=True, set_no=1)
         self.header_sizer.Add(self.output_parent_vmd_file_ctrl.sizer, 1, wx.EXPAND, 0)
 
+        # センター回転ON/OFF
+        self.center_rotatation_flg_ctrl = wx.CheckBox(self, wx.ID_ANY, u"センターの回転を上半身/下半身に移植する", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.center_rotatation_flg_ctrl.SetToolTip(u"チェックを入れると、センターの回転を上半身および下半身に移植します。")
+        self.header_sizer.Add(self.center_rotatation_flg_ctrl, 0, wx.ALL, 5)
+
         self.sizer.Add(self.header_sizer, 0, wx.EXPAND | wx.ALL, 5)
 
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        # 全親Y回転変換実行ボタン
+        # 多段分割変換実行ボタン
         self.parent_btn_ctrl = wx.Button(self, wx.ID_ANY, u"全親移植", wx.DefaultPosition, wx.Size(200, 50), 0)
         self.parent_btn_ctrl.SetToolTip(u"全親を移植させたモーションを再生成します。")
         self.parent_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_convert_parent)
@@ -116,7 +121,7 @@ class ParentPanel(BasePanel):
         self.output_parent_vmd_file_ctrl.enable()
         self.parent_btn_ctrl.Enable()
 
-    # 全親Y回転変換
+    # 多段分割変換
     def on_convert_parent(self, event: wx.Event):
         # フォーム無効化
         self.disable()
@@ -124,7 +129,7 @@ class ParentPanel(BasePanel):
         self.fix_tab()
         # コンソールクリア
         self.console_ctrl.Clear()
-        # 出力先を全親Y回転パネルのコンソールに変更
+        # 出力先を多段分割パネルのコンソールに変更
         sys.stdout = self.console_ctrl
 
         wx.GetApp().Yield()
@@ -149,7 +154,7 @@ class ParentPanel(BasePanel):
 
             return result
 
-        # 全親Y回転変換開始
+        # 多段分割変換開始
         if self.convert_parent_worker:
             logger.error("まだ処理が実行中です。終了してから再度実行してください。", decoration=MLogger.DECORATION_BOX)
         else:
@@ -159,7 +164,7 @@ class ParentPanel(BasePanel):
 
         return result
 
-    # 全親Y回転変換完了処理
+    # 多段分割変換完了処理
     def on_convert_parent_result(self, event: wx.Event):
         self.elapsed_time = event.elapsed_time
         logger.info("\n処理時間: %s", self.show_worked_time())

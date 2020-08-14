@@ -72,19 +72,19 @@ class MainFrame(wx.Frame):
 
         # 全親タブ
         self.parent_panel_ctrl = ParentPanel(self, self.note_ctrl, 9)
-        self.note_ctrl.AddPage(self.parent_panel_ctrl, u"全親", False)
+        self.note_ctrl.AddPage(self.parent_panel_ctrl, u"全親移植", False)
         
         # ゆらぎタブ
         self.noise_panel_ctrl = NoisePanel(self, self.note_ctrl, 9)
-        self.note_ctrl.AddPage(self.noise_panel_ctrl, u"ゆらぎ", False)
+        self.note_ctrl.AddPage(self.noise_panel_ctrl, u"ゆらぎ複製", False)
         
-        # 多段分割タブ
-        self.multi_sprit_panel_ctrl = MultiSplitPanel(self, self.note_ctrl, 9)
-        self.note_ctrl.AddPage(self.multi_sprit_panel_ctrl, u"多段分割", False)
+        # # 多段分割タブ
+        # self.multi_split_panel_ctrl = MultiSplitPanel(self, self.note_ctrl, 9)
+        # self.note_ctrl.AddPage(self.multi_split_panel_ctrl, u"多段分割", False)
         
-        # IKtoFKタブ
-        self.ik2fk_panel_ctrl = IKtoFKPanel(self, self.note_ctrl, 9)
-        self.note_ctrl.AddPage(self.ik2fk_panel_ctrl, u"IKtoFK", False)
+        # # IKtoFKタブ
+        # self.ik2fk_panel_ctrl = IKtoFKPanel(self, self.note_ctrl, 9)
+        # self.note_ctrl.AddPage(self.ik2fk_panel_ctrl, u"IKtoFK", False)
         
         # ---------------------------------------------
 

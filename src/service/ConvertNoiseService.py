@@ -110,13 +110,10 @@ class ConvertNoiseService():
                 # 回転
                 euler = bf.rotation.toEulerAngles()
                 if euler != MVector3D():
-                    org_euler = org_bf.rotation.toEulerAngles()
-                    if org_euler.x() != 0:
-                        euler.setX(euler.x() + (0.5 - np.random.rand()) * self.options.noise_size)
-                    if org_euler.y() != 0:
-                        euler.setY(euler.y() + (0.5 - np.random.rand()) * self.options.noise_size)
-                    if org_euler.z() != 0:
-                        euler.setZ(euler.z() + (0.5 - np.random.rand()) * self.options.noise_size)
+                    # 回転は元が0であっても動かす
+                    euler.setX(euler.x() + (0.5 - np.random.rand()) * self.options.noise_size)
+                    euler.setY(euler.y() + (0.5 - np.random.rand()) * self.options.noise_size)
+                    euler.setZ(euler.z() + (0.5 - np.random.rand()) * self.options.noise_size)
                     bf.rotation = MQuaternion.fromEulerAngles(euler.x(), euler.y(), euler.z())
 
                     # 回転補間曲線

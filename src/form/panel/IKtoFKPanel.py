@@ -116,7 +116,7 @@ class IKtoFKPanel(BasePanel):
         self.output_ik2fk_vmd_file_ctrl.enable()
         self.ik2fk_btn_ctrl.Enable()
 
-    # 全親Y回転変換
+    # 多段分割変換
     def on_convert_ik2fk(self, event: wx.Event):
         # フォーム無効化
         self.disable()
@@ -124,7 +124,7 @@ class IKtoFKPanel(BasePanel):
         self.fix_tab()
         # コンソールクリア
         self.console_ctrl.Clear()
-        # 出力先を全親Y回転パネルのコンソールに変更
+        # 出力先を多段分割パネルのコンソールに変更
         sys.stdout = self.console_ctrl
 
         wx.GetApp().Yield()
@@ -149,7 +149,7 @@ class IKtoFKPanel(BasePanel):
 
             return result
 
-        # 全親Y回転変換開始
+        # 多段分割変換開始
         if self.convert_ik2fk_worker:
             logger.error("まだ処理が実行中です。終了してから再度実行してください。", decoration=MLogger.DECORATION_BOX)
         else:
@@ -159,7 +159,7 @@ class IKtoFKPanel(BasePanel):
 
         return result
 
-    # 全親Y回転変換完了処理
+    # 多段分割変換完了処理
     def on_convert_ik2fk_result(self, event: wx.Event):
         self.elapsed_time = event.elapsed_time
         logger.info("\n処理時間: %s", self.show_worked_time())

@@ -39,6 +39,7 @@ class ParentWorkerThread(BaseWorkerThread):
                 motion=self.frame.parent_panel_ctrl.parent_vmd_file_ctrl.data, \
                 model=self.frame.parent_panel_ctrl.parent_model_file_ctrl.data, \
                 output_path=self.frame.parent_panel_ctrl.output_parent_vmd_file_ctrl.file_ctrl.GetPath(), \
+                center_rotatation_flg=self.frame.parent_panel_ctrl.center_rotatation_flg_ctrl.GetValue(), \
                 monitor=self.frame.parent_panel_ctrl.console_ctrl, \
                 is_file=False, \
                 outout_datetime=logger.outout_datetime, \

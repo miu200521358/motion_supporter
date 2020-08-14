@@ -6,7 +6,6 @@ import wx
 import time
 import gc
 from form.worker.BaseWorkerThread import BaseWorkerThread, task_takes_time
-from mmd.PmxData import PmxModel
 from service.ConvertMultiSplitService import ConvertMultiSplitService
 from module.MOptions import MMultiSplitOptions
 from utils.MLogger import MLogger # noqa
@@ -31,18 +30,15 @@ class MultiSplitWorkerThread(BaseWorkerThread):
         start = time.time()
 
         self.result = self.frame.multi_split_panel_ctrl.multi_split_vmd_file_ctrl.load() and self.result
-
-        dummy_model = PmxModel()
-        dummy_model.name = "ゆらぎモデル"
+        self.result = self.frame.multi_split_panel_ctrl.model_file_ctrl.load(is_check=False) and self.result
 
         if self.result:
             self.options = MMultiSplitOptions(\
                 version_name=self.frame.version_name, \
                 logging_level=self.frame.logging_level, \
                 motion=self.frame.multi_split_panel_ctrl.multi_split_vmd_file_ctrl.data, \
-                model=dummy_model, \
-                multi_split_size=self.frame.multi_split_panel_ctrl.multi_split_size_ctrl.GetValue(), \
-                copy_cnt=self.frame.multi_split_panel_ctrl.copy_cnt_ctrl.GetValue(), \
+                model=self.frame.multi_split_panel_ctrl.model_file_ctrl.data, \
+                target_bones=self.frame.multi_split_panel_ctrl.get_target_bones(), \
                 output_path=self.frame.multi_split_panel_ctrl.output_multi_split_vmd_file_ctrl.file_ctrl.GetPath(), \
                 monitor=self.frame.multi_split_panel_ctrl.console_ctrl, \
                 is_file=False, \

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 import logging
+from logging import root
 import os
 import traceback
 
@@ -30,6 +31,8 @@ class ConvertParentService():
                                     vmd=os.path.basename(self.options.motion.path)) # noqa
             service_data_txt = "{service_data_txt}　モデル: {model}({model_name})\n".format(service_data_txt=service_data_txt,
                                     model=os.path.basename(self.options.motion.path), model_name=self.options.model.name) # noqa
+            service_data_txt = "{service_data_txt}　センター回転移植: {center_rotation}\n".format(service_data_txt=service_data_txt,
+                                    center_rotation=self.options.center_rotatation_flg) # noqa
 
             logger.info(service_data_txt, decoration=MLogger.DECORATION_BOX)
 
@@ -54,47 +57,140 @@ class ConvertParentService():
         motion = self.options.motion
         model = self.options.model
 
-        parent_bone_name = "全ての親"
+        root_bone_name = "全ての親"
+        center_bone_name = "センター"
+        waist_bone_name = "腰"
+        upper_bone_name = "上半身"
+        lower_bone_name = "下半身"
+        left_leg_bone_name = "左足"
+        right_leg_bone_name = "右足"
+        left_leg_ik_bone_name = "左足ＩＫ"
+        right_leg_ik_bone_name = "右足ＩＫ"
 
-        # 移動の移植
-        for bone_name in ["センター", "右足ＩＫ", "左足ＩＫ"]:
+        # まずキー登録
+        for bone_name in [root_bone_name]:
             if bone_name in model.bones:
-                links = model.create_link_2_top_one(bone_name)
-                fnos = motion.get_bone_fnos(bone_name, parent_bone_name)
-
-                # まずキー登録
+                fnos = motion.get_bone_fnos(root_bone_name, center_bone_name, waist_bone_name, upper_bone_name, lower_bone_name, \
+                                            left_leg_bone_name, right_leg_bone_name, left_leg_ik_bone_name, right_leg_ik_bone_name)
                 for fno in fnos:
                     bf = motion.calc_bf(bone_name, fno)
                     motion.regist_bf(bf, bone_name, fno)
 
+        logger.info("-- 準備完了①")
+
+        for bone_name in [center_bone_name, upper_bone_name, lower_bone_name]:
+            if bone_name in model.bones:
+                fnos = motion.get_bone_fnos(bone_name, center_bone_name, root_bone_name)
+
+                for fno in fnos:
+                    bf = motion.calc_bf(bone_name, fno)
+                    motion.regist_bf(bf, bone_name, fno)
+
+        logger.info("-- 準備完了②")
+
+        for bone_name in [right_leg_ik_bone_name, left_leg_ik_bone_name]:
+            if bone_name in model.bones:
+                fnos = motion.get_bone_fnos(bone_name, root_bone_name)
+
+                for fno in fnos:
+                    bf = motion.calc_bf(bone_name, fno)
+                    motion.regist_bf(bf, bone_name, fno)
+            
+        logger.info("-- 準備完了③")
+
+        # センターの移植
+        for bone_name in [center_bone_name]:
+            if bone_name in model.bones:
+                prev_sep_fno = 0
+                links = model.create_link_2_top_one(bone_name)
+                fnos = motion.get_bone_fnos(bone_name, root_bone_name)
+
                 # 移植
                 for fno in fnos:
+                    root_bf = motion.calc_bf(root_bone_name, fno)
+
                     bf = motion.calc_bf(bone_name, fno)
                     global_3ds_dic = MServiceUtils.calc_global_pos(model, links, motion, fno)
                     bone_global_pos = global_3ds_dic[bone_name]
 
+                    # グローバル位置からの差
                     bf.position = bone_global_pos - model.bones[bone_name].position
+
+                    # 回転の吸収
+                    bf.rotation = root_bf.rotation * bf.rotation
+
                     motion.regist_bf(bf, bone_name, fno)
 
-        # 回転の移植
-        for bone_name in ["上半身", "下半身", "右足ＩＫ", "左足ＩＫ"]:
+                    if fno // 2000 > prev_sep_fno and fnos[-1] > 0:
+                        logger.info("-- %sフレーム目:終了(%s％)【%s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
+                        prev_sep_fno = fno // 2000
+
+        # 足IKの移植
+        for bone_name in [right_leg_ik_bone_name, left_leg_ik_bone_name]:
             if bone_name in model.bones:
+                prev_sep_fno = 0
                 links = model.create_link_2_top_one(bone_name)
-                fnos = motion.get_bone_fnos(bone_name, parent_bone_name)
-
-                # まずキー登録
-                for fno in fnos:
-                    bf = motion.calc_bf(bone_name, fno)
-                    motion.regist_bf(bf, bone_name, fno)
+                fnos = motion.get_bone_fnos(bone_name, root_bone_name)
 
                 # 移植
                 for fno in fnos:
-                    parent_bf = motion.calc_bf(parent_bone_name, fno)
+                    root_bf = motion.calc_bf(root_bone_name, fno)
+
                     bf = motion.calc_bf(bone_name, fno)
-                    bf.rotation = parent_bf.rotation * bf.rotation
+                    global_3ds_dic = MServiceUtils.calc_global_pos(model, links, motion, fno)
+                    bone_global_pos = global_3ds_dic[bone_name]
+
+                    # グローバル位置からの差
+                    bf.position = bone_global_pos - model.bones[bone_name].position
+
+                    # 回転
+                    bf.rotation = root_bf.rotation * bf.rotation
+
                     motion.regist_bf(bf, bone_name, fno)
 
+                    if fno // 2000 > prev_sep_fno and fnos[-1] > 0:
+                        logger.info("-- %sフレーム目:終了(%s％)【%s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
+                        prev_sep_fno = fno // 2000
+
         # 全ての親削除
-        del motion.bones[parent_bone_name]
+        del motion.bones[root_bone_name]
+
+        if self.options.center_rotatation_flg:
+            # センター→上半身・下半身の移植
+            prev_sep_fno = 0
+            fnos = motion.get_bone_fnos(upper_bone_name, lower_bone_name, center_bone_name)
+            for fno in fnos:
+                center_bf = motion.calc_bf(center_bone_name, fno)
+                waist_bf = motion.calc_bf(waist_bone_name, fno)
+                upper_bf = motion.calc_bf(upper_bone_name, fno)
+                lower_bf = motion.calc_bf(lower_bone_name, fno)
+
+                center_links = model.create_link_2_top_one(center_bone_name)
+                lower_links = model.create_link_2_top_one(lower_bone_name)
+
+                # 一旦移動量を保持
+                center_global_3ds_dic, center_global_matrix = MServiceUtils.calc_global_pos(model, lower_links, motion, fno, limit_links=center_links, return_matrix=True)
+
+                # 回転移植
+                upper_bf.rotation = center_bf.rotation * waist_bf.rotation * upper_bf.rotation
+                motion.regist_bf(upper_bf, upper_bone_name, fno)
+
+                lower_bf.rotation = center_bf.rotation * waist_bf.rotation * lower_bf.rotation
+                motion.regist_bf(lower_bf, lower_bone_name, fno)
+
+                # 腰クリア
+                if waist_bone_name in model.bones:
+                    waist_bf.rotation = MQuaternion()
+                    motion.regist_bf(waist_bf, waist_bone_name, fno)
+
+                # センター回転クリア
+                center_bf.rotation = MQuaternion()
+                # 移動を下半身ベースで再計算
+                center_bf.position = center_global_3ds_dic[lower_bone_name] - model.bones[lower_bone_name].position
+                motion.regist_bf(center_bf, center_bone_name, fno)
+
+                if fno // 1000 > prev_sep_fno and fnos[-1] > 0:
+                    logger.info("-- %sフレーム目:終了(%s％)【%s】", fno, round((fno / fnos[-1]) * 100, 3), "上半身・下半身")
+                    prev_sep_fno = fno // 1000
 
 

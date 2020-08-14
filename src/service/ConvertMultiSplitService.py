@@ -28,104 +28,96 @@ class ConvertMultiSplitService():
         logging.basicConfig(level=self.options.logging_level, format="%(message)s [%(module_name)s]")
 
         try:
-            service_data_txt = "ゆらぎ複製処理実行\n------------------------\nexeバージョン: {version_name}\n".format(version_name=self.options.version_name) \
+            service_data_txt = "多段分割処理実行\n------------------------\nexeバージョン: {version_name}\n".format(version_name=self.options.version_name) \
 
             service_data_txt = "{service_data_txt}　VMD: {vmd}\n".format(service_data_txt=service_data_txt,
                                     vmd=os.path.basename(self.options.motion.path)) # noqa
-            service_data_txt = "{service_data_txt}　ゆらぎの大きさ: {multi_split_size}\n".format(service_data_txt=service_data_txt,
-                                    multi_split_size=self.options.multi_split_size) # noqa
-            service_data_txt = "{service_data_txt}　複製数: {copy_cnt}体\n".format(service_data_txt=service_data_txt,
-                                    copy_cnt=self.options.copy_cnt) # noqa
+            service_data_txt = "{service_data_txt}　モデル: {model}({model_name})\n".format(service_data_txt=service_data_txt,
+                                    model=os.path.basename(self.options.motion.path), model_name=self.options.model.name) # noqa
+            service_data_txt = "{service_data_txt}　対象ボーン: {target_bones}\n".format(service_data_txt=service_data_txt,
+                                    target_bones=",".join(self.options.target_bones)) # noqa
 
-            logger.info(service_data_txt, decoration=MLogger.DECORATION_BOX)
+            # 処理に成功しているか
+            result = self.convert_multi_split()
 
-            futures = []
+            # 最後に出力
+            VmdWriter(MOptionsDataSet(self.options.motion, None, self.options.model, self.options.output_path, False, False, [], None, 0, [])).write()
 
-            with ThreadPoolExecutor(thread_name_prefix="move", max_workers=min(5, self.options.max_workers)) as executor:
-                for copy_no in range(self.options.copy_cnt):
-                    futures.append(executor.submit(self.convert_multi_split, copy_no))
+            logger.info("出力終了: %s", os.path.basename(self.options.output_path), decoration=MLogger.DECORATION_BOX, title="成功")
 
-            concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
-
-            for f in futures:
-                if not f.result():
-                    return False
-
-            return True
+            return result
         except SizingException as se:
-            logger.error("ゆらぎ複製処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
+            logger.error("多段分割処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
         except Exception:
-            logger.critical("ゆらぎ複製処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc(), decoration=MLogger.DECORATION_BOX)
+            logger.critical("多段分割処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc(), decoration=MLogger.DECORATION_BOX)
         finally:
             logging.shutdown()
 
-    # ゆらぎ複製処理実行
-    def convert_multi_split(self, copy_no):
-        logger.info("ゆらぎ複製　【No.%s】", (copy_no + 1), decoration=MLogger.DECORATION_LINE)
+    # 多段分割処理実行
+    def convert_multi_split(self):
+        logger.info("多段分割", decoration=MLogger.DECORATION_LINE)
 
-        # データをコピーしてそっちを弄る
-        motion = self.options.motion.copy()
+        motion = self.options.motion
+        model = self.options.model
 
-        for bone_name in motion.bones.keys():
+        for bone_name in self.options.target_bones:
+            if bone_name not in model.bones or bone_name not in motion.bones:
+                continue
+
             fnos = motion.get_bone_fnos(bone_name)
-            prev_fno = 0
+            # ローカルX軸
+            local_x_axis = model.get_local_x_axis(bone_name)
             prev_sep_fno = 0
 
             # 事前に細分化
             self.prepare_split_stance(motion, bone_name)
-            logger.info("-- 準備完了【No.%s】", copy_no + 1)
+            logger.info("-- 準備完了【%s】", bone_name)
 
             for fno in fnos:
                 bf = motion.bones[bone_name][fno]
 
-                # 移動
-                if bf.position != MVector3D():
-                    org_bf = self.options.motion.calc_bf(bone_name, fno)
-                    prev_org_bf = self.options.motion.calc_bf(bone_name, prev_fno)
+                if model.bones[bone_name].getRotatable():
+                    # 回転を分ける
+                    x_qq, y_qq, z_qq, _ = MServiceUtils.separate_local_qq(fno, bone_name, bf.rotation, local_x_axis)
 
-                    if org_bf.position == prev_org_bf.position and fno > 0:
-                        bf.position = motion.calc_bf(bone_name, prev_fno).position
-                    else:
-                        bf.position.setX(bf.position.x() + (0.5 - np.random.rand()) * (self.options.multi_split_size / 10))
-                        if org_bf.position.y() != 0:
-                            # Yは0だったら動かさない
-                            bf.position.setY(bf.position.y() + (0.5 - np.random.rand()) * (self.options.multi_split_size / 10))
-                        bf.position.setZ(bf.position.z() + (0.5 - np.random.rand()) * (self.options.multi_split_size / 10))
+                    rx_bf = VmdBoneFrame(fno)
+                    rx_bf.set_name("{0}RX".format(bf.name))
+                    rx_bf.rotation = x_qq
+                    motion.regist_bf(rx_bf, rx_bf.name, fno)
 
-                        # 移動補間曲線
-                        for (bz_idx1, bz_idx2, bz_idx3, bz_idx4) in [MBezierUtils.MX_x1_idxs, MBezierUtils.MX_y1_idxs, MBezierUtils.MX_x2_idxs, MBezierUtils.MX_y2_idxs, \
-                                                                     MBezierUtils.MY_x1_idxs, MBezierUtils.MY_y1_idxs, MBezierUtils.MY_x2_idxs, MBezierUtils.MY_y2_idxs, \
-                                                                     MBezierUtils.MZ_x1_idxs, MBezierUtils.MZ_y1_idxs, MBezierUtils.MZ_x2_idxs, MBezierUtils.MZ_y2_idxs]:
-                            multi_split_interpolation = bf.interpolation[bz_idx1] + math.ceil((0.5 - np.random.rand()) * self.options.multi_split_size)
-                            bf.interpolation[bz_idx1] = bf.interpolation[bz_idx2] = bf.interpolation[bz_idx3] = bf.interpolation[bz_idx4] = int(multi_split_interpolation)
+                    ry_bf = VmdBoneFrame(fno)
+                    ry_bf.set_name("{0}RY".format(bf.name))
+                    ry_bf.rotation = y_qq
+                    motion.regist_bf(ry_bf, ry_bf.name, fno)
+
+                    rz_bf = VmdBoneFrame(fno)
+                    rz_bf.set_name("{0}RZ".format(bf.name))
+                    rz_bf.rotation = z_qq
+                    motion.regist_bf(rz_bf, rz_bf.name, fno)
                 
-                # 回転
-                euler = bf.rotation.toEulerAngles()
-                if euler != MVector3D():
-                    euler.setX(euler.x() + (0.5 - np.random.rand()) * self.options.multi_split_size)
-                    euler.setY(euler.y() + (0.5 - np.random.rand()) * self.options.multi_split_size)
-                    euler.setZ(euler.z() + (0.5 - np.random.rand()) * self.options.multi_split_size)
-                    bf.rotation = MQuaternion.fromEulerAngles(euler.x(), euler.y(), euler.z())
+                if model.bones[bone_name].getTranslatable():
+                    # 移動を分ける
+                    mx_bf = VmdBoneFrame(fno)
+                    mx_bf.set_name("{0}MX".format(bf.name))
+                    mx_bf.position.setX(bf.position.x())
+                    motion.regist_bf(mx_bf, mx_bf.name, fno)
 
-                    # 回転補間曲線
-                    for (bz_idx1, bz_idx2, bz_idx3, bz_idx4) in [MBezierUtils.R_x1_idxs, MBezierUtils.R_y1_idxs, MBezierUtils.R_x2_idxs, MBezierUtils.R_y2_idxs]:
-                        multi_split_interpolation = bf.interpolation[bz_idx1] + math.ceil((0.5 - np.random.rand()) * self.options.multi_split_size)
+                    my_bf = VmdBoneFrame(fno)
+                    my_bf.set_name("{0}MY".format(bf.name))
+                    my_bf.position.setY(bf.position.y())
+                    motion.regist_bf(my_bf, my_bf.name, fno)
 
-                        bf.interpolation[bz_idx1] = bf.interpolation[bz_idx2] = bf.interpolation[bz_idx3] = bf.interpolation[bz_idx4] = int(multi_split_interpolation)
-                
-                # 前回fno保持
-                prev_fno = fno
+                    mz_bf = VmdBoneFrame(fno)
+                    mz_bf.set_name("{0}MZ".format(bf.name))
+                    mz_bf.position.setZ(bf.position.z())
+                    motion.regist_bf(mz_bf, mz_bf.name, fno)
 
                 if fno // 2000 > prev_sep_fno and fnos[-1] > 0:
-                    logger.info("-- %sフレーム目:終了(%s％)【No.%s - %s】", fno, round((fno / fnos[-1]) * 100, 3), copy_no + 1, bone_name)
+                    logger.info("-- %sフレーム目:終了(%s％)【%s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
                     prev_sep_fno = fno // 2000
 
-        output_path = self.options.output_path.replace("nxxx", "n{0:03d}".format(copy_no + 1))
-
-        # 最後に出力
-        VmdWriter(MOptionsDataSet(motion, None, self.options.model, output_path, False, False, [], None, 0, [])).write()
-
-        logger.info("出力成功: %s", os.path.basename(output_path))
+            # 元のボーン削除
+            del motion.bones[bone_name]
 
     # スタンス用細分化
     def prepare_split_stance(self, motion: VmdMotion, target_bone_name: str):
@@ -147,3 +139,5 @@ class ConvertMultiSplitService():
                     # キーが追加できる状態であれば、追加
                     half_bf = motion.calc_bf(target_bone_name, half_fno)
                     motion.regist_bf(half_bf, target_bone_name, half_fno)
+
+
