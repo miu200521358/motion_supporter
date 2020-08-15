@@ -93,11 +93,16 @@ class ConvertNoiseService():
                         bf.position = motion.calc_bf(bone_name, prev_fno).position
                     else:
                         # 0だったら動かさない
-                        if org_bf.position.x() != 0:
+                        if round(org_bf.position.x(), 1) != 0:
                             bf.position.setX(bf.position.x() + (0.5 - np.random.rand()) * (self.options.noise_size / 10))
-                        if org_bf.position.y() != 0:
-                            bf.position.setY(bf.position.y() + (0.5 - np.random.rand()) * (self.options.noise_size / 10))
-                        if org_bf.position.z() != 0:
+                        if round(org_bf.position.y(), 1) != 0 and "足ＩＫ" not in bone_name:
+                            # 足ＩＫのＹは動かさない
+                            if org_bf.position.y() < 0:
+                                # Yはオリジナルがマイナスの場合は、マイナスのみに動かす
+                                bf.position.setY(bf.position.y() + (0 - np.random.rand()) * (self.options.noise_size / 10))
+                            elif org_bf.position.y() > 0:
+                                bf.position.setY(bf.position.y() + (0.5 - np.random.rand()) * (self.options.noise_size / 10))
+                        if round(org_bf.position.z(), 1) != 0:
                             bf.position.setZ(bf.position.z() + (0.5 - np.random.rand()) * (self.options.noise_size / 10))
 
                         # 移動補間曲線

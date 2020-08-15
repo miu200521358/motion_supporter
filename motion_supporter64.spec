@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # -*- mode: python -*-
-# VMDサイジング 64bit版
+# モーションサポーター 64bit版
 
 block_cipher = None
 
@@ -26,7 +26,7 @@ exe = EXE(pyz,
           a.zipfiles,
           a.datas,
           [],
-          name='MotionSupporter_1.00_β03_64bit',
+          name='MotionSupporter_1.00_β05_64bit',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,

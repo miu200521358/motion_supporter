@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 #
 import logging
-from logging import root
 import os
 import traceback
+import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 
 from module.MOptions import MParentOptions, MOptionsDataSet
 from mmd.PmxData import PmxModel # noqa
@@ -12,7 +13,7 @@ from mmd.VmdWriter import VmdWriter
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from utils import MUtils, MServiceUtils, MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
-from utils.MException import SizingException
+from utils.MException import SizingException, MKilledException
 
 logger = MLogger(__name__, level=1)
 
@@ -62,41 +63,49 @@ class ConvertParentService():
         waist_bone_name = "腰"
         upper_bone_name = "上半身"
         lower_bone_name = "下半身"
-        left_leg_bone_name = "左足"
-        right_leg_bone_name = "右足"
         left_leg_ik_bone_name = "左足ＩＫ"
         right_leg_ik_bone_name = "右足ＩＫ"
 
         # まずキー登録
         for bone_name in [root_bone_name]:
             if bone_name in model.bones:
+                prev_sep_fno = 0
                 fnos = motion.get_bone_fnos(root_bone_name, center_bone_name, waist_bone_name, upper_bone_name, lower_bone_name, \
-                                            left_leg_bone_name, right_leg_bone_name, left_leg_ik_bone_name, right_leg_ik_bone_name)
+                                            left_leg_ik_bone_name, right_leg_ik_bone_name)
                 for fno in fnos:
                     bf = motion.calc_bf(bone_name, fno)
                     motion.regist_bf(bf, bone_name, fno)
 
-        logger.info("-- 準備完了①")
+                    if fno // 2000 > prev_sep_fno and fnos[-1] > 0:
+                        logger.info("-- %sフレーム目:終了(%s％)【準備 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
+                        prev_sep_fno = fno // 2000
 
-        for bone_name in [center_bone_name, upper_bone_name, lower_bone_name]:
-            if bone_name in model.bones:
-                fnos = motion.get_bone_fnos(bone_name, center_bone_name, root_bone_name)
+        if self.options.center_rotatation_flg:
+            for bone_name in [center_bone_name, upper_bone_name, lower_bone_name]:
+                if bone_name in model.bones:
+                    prev_sep_fno = 0
+                    fnos = motion.get_bone_fnos(bone_name, center_bone_name, root_bone_name)
 
-                for fno in fnos:
-                    bf = motion.calc_bf(bone_name, fno)
-                    motion.regist_bf(bf, bone_name, fno)
+                    for fno in fnos:
+                        bf = motion.calc_bf(bone_name, fno)
+                        motion.regist_bf(bf, bone_name, fno)
 
-        logger.info("-- 準備完了②")
+                        if fno // 2000 > prev_sep_fno and fnos[-1] > 0:
+                            logger.info("-- %sフレーム目:終了(%s％)【準備 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
+                            prev_sep_fno = fno // 2000
 
         for bone_name in [right_leg_ik_bone_name, left_leg_ik_bone_name]:
             if bone_name in model.bones:
+                prev_sep_fno = 0
                 fnos = motion.get_bone_fnos(bone_name, root_bone_name)
 
                 for fno in fnos:
                     bf = motion.calc_bf(bone_name, fno)
                     motion.regist_bf(bf, bone_name, fno)
             
-        logger.info("-- 準備完了③")
+                    if fno // 2000 > prev_sep_fno and fnos[-1] > 0:
+                        logger.info("-- %sフレーム目:終了(%s％)【準備 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
+                        prev_sep_fno = fno // 2000
 
         # センターの移植
         for bone_name in [center_bone_name]:
@@ -122,7 +131,7 @@ class ConvertParentService():
                     motion.regist_bf(bf, bone_name, fno)
 
                     if fno // 2000 > prev_sep_fno and fnos[-1] > 0:
-                        logger.info("-- %sフレーム目:終了(%s％)【%s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
+                        logger.info("-- %sフレーム目:終了(%s％)【移植 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
                         prev_sep_fno = fno // 2000
 
         # 足IKの移植
@@ -149,7 +158,7 @@ class ConvertParentService():
                     motion.regist_bf(bf, bone_name, fno)
 
                     if fno // 2000 > prev_sep_fno and fnos[-1] > 0:
-                        logger.info("-- %sフレーム目:終了(%s％)【%s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
+                        logger.info("-- %sフレーム目:終了(%s％)【移植 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
                         prev_sep_fno = fno // 2000
 
         # 全ての親削除
@@ -169,7 +178,7 @@ class ConvertParentService():
                 lower_links = model.create_link_2_top_one(lower_bone_name)
 
                 # 一旦移動量を保持
-                center_global_3ds_dic, center_global_matrix = MServiceUtils.calc_global_pos(model, lower_links, motion, fno, limit_links=center_links, return_matrix=True)
+                center_global_3ds_dic = MServiceUtils.calc_global_pos(model, lower_links, motion, fno, limit_links=center_links)
 
                 # 回転移植
                 upper_bf.rotation = center_bf.rotation * waist_bf.rotation * upper_bf.rotation
@@ -190,7 +199,38 @@ class ConvertParentService():
                 motion.regist_bf(center_bf, center_bone_name, fno)
 
                 if fno // 1000 > prev_sep_fno and fnos[-1] > 0:
-                    logger.info("-- %sフレーム目:終了(%s％)【%s】", fno, round((fno / fnos[-1]) * 100, 3), "上半身・下半身")
+                    logger.info("-- %sフレーム目:終了(%s％)【移植 - %s】", fno, round((fno / fnos[-1]) * 100, 3), "上半身・下半身")
                     prev_sep_fno = fno // 1000
+
+        futures = []
+
+        with ThreadPoolExecutor(thread_name_prefix="remove", max_workers=min(5, self.options.max_workers)) as executor:
+            for bone_name in [center_bone_name, upper_bone_name, lower_bone_name, right_leg_ik_bone_name, left_leg_ik_bone_name]:
+                futures.append(executor.submit(self.remove_unnecessary_bf, bone_name))
+
+        concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
+
+        for f in futures:
+            if not f.result():
+                return False
+        
+        return True
+
+    # 不要キー削除
+    def remove_unnecessary_bf(self, bone_name: str):
+        try:
+            self.options.motion.remove_unnecessary_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
+                                                      self.options.model.bones[bone_name].getTranslatable())
+
+            return True
+        except MKilledException as ke:
+            raise ke
+        except SizingException as se:
+            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
+            return se
+        except Exception as e:
+            import traceback
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            raise e
 
 
