@@ -26,30 +26,24 @@ class ConvertMultiJoinService():
         logging.basicConfig(level=self.options.logging_level, format="%(message)s [%(module_name)s]")
 
         try:
-            service_data_txt = "多段分割処理実行\n------------------------\nexeバージョン: {version_name}\n".format(version_name=self.options.version_name) \
+            service_data_txt = "多段統合処理実行\n------------------------\nexeバージョン: {version_name}\n".format(version_name=self.options.version_name) \
 
             service_data_txt = "{service_data_txt}　VMD: {vmd}\n".format(service_data_txt=service_data_txt,
                                     vmd=os.path.basename(self.options.motion.path)) # noqa
             service_data_txt = "{service_data_txt}　モデル: {model}({model_name})\n".format(service_data_txt=service_data_txt,
                                     model=os.path.basename(self.options.motion.path), model_name=self.options.model.name) # noqa
 
-            selections = ["{0} → 回転X: {1}, 回転Y: {2}, 回転Z: {3}, 移動X: {4}, 移動Y: {5}, 移動Z: {6}" \
+            selections = ["{0} ← 回転X: {1}, 回転Y: {2}, 回転Z: {3}, 移動X: {4}, 移動Y: {5}, 移動Z: {6}" \
                           .format(bset[0], bset[1], bset[2], bset[3], bset[4], bset[5], bset[6]) for bset in self.options.target_bones]
             service_data_txt = "{service_data_txt}　対象ボーン: {target_bones}\n".format(service_data_txt=service_data_txt,
                                     target_bones='\n'.join(selections)) # noqa
 
-            logger.info("多段分割", decoration=MLogger.DECORATION_LINE)
-
-            motion = self.options.motion
-            model = self.options.model
+            logger.info(service_data_txt, decoration=MLogger.DECORATION_BOX)
 
             futures = []
 
             with ThreadPoolExecutor(thread_name_prefix="join", max_workers=min(5, self.options.max_workers)) as executor:
                 for (bone_name, rrxbn, rrybn, rrzbn, rmxbn, rmybn, rmzbn) in self.options.target_bones:
-                    if bone_name not in model.bones or bone_name not in motion.bones:
-                        continue
-
                     futures.append(executor.submit(self.convert_multi_join, bone_name, rrxbn, rrybn, rrzbn, rmxbn, rmybn, rmzbn))
 
             concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
@@ -64,203 +58,96 @@ class ConvertMultiJoinService():
             logger.info("出力終了: %s", os.path.basename(self.options.output_path), decoration=MLogger.DECORATION_BOX, title="成功")
 
             return True
+        except MKilledException:
+            return False
         except SizingException as se:
-            logger.error("多段分割処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
+            logger.error("多段統合処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
         except Exception:
-            logger.critical("多段分割処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc(), decoration=MLogger.DECORATION_BOX)
+            logger.critical("多段統合処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc(), decoration=MLogger.DECORATION_BOX)
         finally:
             logging.shutdown()
 
-    # 多段分割処理実行
+    # 多段統合処理実行
     def convert_multi_join(self, bone_name: str, rrxbn: str, rrybn: str, rrzbn: str, rmxbn: str, rmybn: str, rmzbn: str):
-        logger.info("多段分割", decoration=MLogger.DECORATION_LINE)
+        logger.info("多段統合【%s】", bone_name, decoration=MLogger.DECORATION_LINE)
 
         motion = self.options.motion
         model = self.options.model
 
-        # ローカルX軸
-        local_x_axis = model.get_local_x_axis(bone_name)
-        prev_sep_fno = 0
-
         # 事前に全打ち
-        motion.regist_full_bf(0, [bone_name], offset=0)
-        fnos = motion.get_bone_fnos(bone_name)
+        fnos = motion.get_differ_fnos(0, [rrxbn, rrybn, rrzbn, rmxbn, rmybn, rmzbn], limit_degrees=5, limit_length=0.1)
 
-        logger.info("-- 準備完了【%s】", bone_name)
-
+        prev_sep_fno = 0
         for fno in fnos:
-            bf = motion.bones[bone_name][fno]
+            bf = motion.calc_bf(bone_name, fno)
+            motion.regist_bf(bf, bone_name, fno)
 
             if model.bones[bone_name].getRotatable():
-                # 回転を分ける
-                x_qq, y_qq, z_qq, _ = MServiceUtils.separate_local_qq(fno, bone_name, bf.rotation, local_x_axis)
-
-                rx_bf = VmdBoneFrame(fno)
-                rx_bf.set_name(rrxbn)
-                rx_bf.rotation *= x_qq
+                rx_bf = motion.calc_bf(rrxbn, fno)
                 motion.regist_bf(rx_bf, rx_bf.name, fno)
 
-                ry_bf = VmdBoneFrame(fno)
-                ry_bf.set_name(rrybn)
-                ry_bf.rotation *= y_qq
+                ry_bf = motion.calc_bf(rrybn, fno)
                 motion.regist_bf(ry_bf, ry_bf.name, fno)
-
-                rz_bf = VmdBoneFrame(fno)
-                rz_bf.set_name(rrzbn)
-                rz_bf.rotation *= z_qq
+                
+                rz_bf = motion.calc_bf(rrzbn, fno)
                 motion.regist_bf(rz_bf, rz_bf.name, fno)
-            
+                
             if model.bones[bone_name].getTranslatable():
-                # 移動を分ける
-                mx_bf = VmdBoneFrame(fno)
-                mx_bf.set_name(rmxbn)
-                mx_bf.position.setX(mx_bf.position.x() + bf.position.x())
+                mx_bf = motion.calc_bf(rmxbn, fno)
                 motion.regist_bf(mx_bf, mx_bf.name, fno)
 
-                my_bf = VmdBoneFrame(fno)
-                my_bf.set_name(rmybn)
-                my_bf.position.setY(my_bf.position.y() + bf.position.y())
+                my_bf = motion.calc_bf(rmybn, fno)
                 motion.regist_bf(my_bf, my_bf.name, fno)
 
-                mz_bf = VmdBoneFrame(fno)
-                mz_bf.set_name(rmzbn)
-                mz_bf.position.setZ(mz_bf.position.z() + bf.position.z())
+                mz_bf = motion.calc_bf(rmzbn, fno)
                 motion.regist_bf(mz_bf, mz_bf.name, fno)
 
             if fno // 1000 > prev_sep_fno and fnos[-1] > 0:
-                logger.info("-- %sフレーム目:終了(%s％)【%s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
+                logger.info("-- %sフレーム目:終了(%s％)【キーフレ追加 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
                 prev_sep_fno = fno // 1000
 
+        logger.info("-- 準備完了【%s】", bone_name)
+
+        prev_sep_fno = 0
+        for fno in fnos:
+            bf = motion.calc_bf(bone_name, fno)
+
+            if model.bones[bone_name].getRotatable():
+                rx_bf = motion.calc_bf(rrxbn, fno) if len(rrxbn) > 0 else VmdBoneFrame(fno)
+                ry_bf = motion.calc_bf(rrybn, fno) if len(rrybn) > 0 else VmdBoneFrame(fno)
+                rz_bf = motion.calc_bf(rrzbn, fno) if len(rrzbn) > 0 else VmdBoneFrame(fno)
+                bf.rotation = ry_bf.rotation * rx_bf.rotation * rz_bf.rotation
+
+                mx_bf = motion.calc_bf(rmxbn, fno) if len(rmxbn) > 0 else VmdBoneFrame(fno)
+                my_bf = motion.calc_bf(rmybn, fno) if len(rmybn) > 0 else VmdBoneFrame(fno)
+                mz_bf = motion.calc_bf(rmzbn, fno) if len(rmzbn) > 0 else VmdBoneFrame(fno)
+                bf.position = my_bf.position + mx_bf.position + mz_bf.position
+
+                motion.regist_bf(bf, bone_name, fno)
+
+            if fno // 1000 > prev_sep_fno and fnos[-1] > 0:
+                logger.info("-- %sフレーム目:終了(%s％)【多段統合 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
+                prev_sep_fno = fno // 1000
+
+        logger.info("-- 統合完了【%s】", bone_name)
+
         # 元のボーン削除
-        del motion.bones[bone_name]
+        if len(rrxbn) > 0 and rrxbn in motion.bones:
+            del motion.bones[rrxbn]
+        if len(rrybn) > 0 and rrybn in motion.bones:
+            del motion.bones[rrybn]
+        if len(rrzbn) > 0 and rrzbn in motion.bones:
+            del motion.bones[rrzbn]
+        if len(rmxbn) > 0 and rmxbn in motion.bones:
+            del motion.bones[rmxbn]
+        if len(rmybn) > 0 and rmybn in motion.bones:
+            del motion.bones[rmybn]
+        if len(rmzbn) > 0 and rmzbn in motion.bones:
+            del motion.bones[rmzbn]
 
         # 不要キー削除
-        futures = []
-        with ThreadPoolExecutor(thread_name_prefix="remove", max_workers=min(5, self.options.max_workers)) as executor:
-            if model.bones[rrxbn].getRotatable():
-                futures.append(executor.submit(self.remove_unnecessary_bf, rrxbn))
-                futures.append(executor.submit(self.remove_unnecessary_bf, rrybn))
-                futures.append(executor.submit(self.remove_unnecessary_bf, rrzbn))
-
-            if model.bones[bone_name].getTranslatable():
-                futures.append(executor.submit(self.remove_unnecessary_bf, rmxbn))
-                futures.append(executor.submit(self.remove_unnecessary_bf, rmybn))
-                futures.append(executor.submit(self.remove_unnecessary_bf, rmzbn))
-
-        concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
-
-        for f in futures:
-            if not f.result():
-                return False
+        self.options.motion.remove_unnecessary_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
+                                                  self.options.model.bones[bone_name].getTranslatable())
         
         return True
-
-    # # 多段分割処理実行
-    # def convert_multi_join(self, bone_name: str, rrxbn: str, rrybn: str, rrzbn: str, rmxbn: str, rmybn: str, rmzbn: str):
-    #     logger.info("多段分割", decoration=MLogger.DECORATION_LINE)
-
-    #     motion = self.options.motion
-    #     model = self.options.model
-
-    #     fnos = motion.get_bone_fnos(bone_name)
-    #     # ローカルX軸
-    #     local_x_axis = model.get_local_x_axis(bone_name)
-    #     prev_sep_fno = 0
-
-    #     # 事前に細分化
-    #     self.prepare_join_stance(motion, bone_name)
-    #     logger.info("-- 準備完了【%s】", bone_name)
-
-    #     for fno in fnos:
-    #         bf = motion.bones[bone_name][fno]
-
-    #         if model.bones[bone_name].getRotatable():
-    #             # 回転を分ける
-    #             x_qq, y_qq, z_qq, _ = MServiceUtils.separate_local_qq(fno, bone_name, bf.rotation, local_x_axis)
-
-    #             rx_bf = VmdBoneFrame(fno)
-    #             rx_bf.set_name(rrxbn)
-    #             rx_bf.rotation *= x_qq
-    #             motion.copy_interpolation(bf, rx_bf, MBezierUtils.BZ_TYPE_R)
-    #             motion.regist_bf(rx_bf, rx_bf.name, fno, copy_interpolation=True)
-
-    #             ry_bf = VmdBoneFrame(fno)
-    #             ry_bf.set_name(rrybn)
-    #             ry_bf.rotation *= y_qq
-    #             motion.copy_interpolation(bf, ry_bf, MBezierUtils.BZ_TYPE_R)
-    #             motion.regist_bf(ry_bf, ry_bf.name, fno, copy_interpolation=True)
-
-    #             rz_bf = VmdBoneFrame(fno)
-    #             rz_bf.set_name(rrzbn)
-    #             rz_bf.rotation *= z_qq
-    #             motion.copy_interpolation(bf, rz_bf, MBezierUtils.BZ_TYPE_R)
-    #             motion.regist_bf(rz_bf, rz_bf.name, fno, copy_interpolation=True)
-            
-    #         if model.bones[bone_name].getTranslatable():
-    #             # 移動を分ける
-    #             mx_bf = VmdBoneFrame(fno)
-    #             mx_bf.set_name(rmxbn)
-    #             mx_bf.position.setX(mx_bf.position.x() + bf.position.x())
-    #             motion.copy_interpolation(bf, mx_bf, MBezierUtils.BZ_TYPE_MX)
-    #             motion.regist_bf(mx_bf, mx_bf.name, fno, copy_interpolation=True)
-
-    #             my_bf = VmdBoneFrame(fno)
-    #             my_bf.set_name(rmybn)
-    #             my_bf.position.setY(my_bf.position.y() + bf.position.y())
-    #             motion.copy_interpolation(bf, my_bf, MBezierUtils.BZ_TYPE_MY)
-    #             motion.regist_bf(my_bf, my_bf.name, fno, copy_interpolation=True)
-
-    #             mz_bf = VmdBoneFrame(fno)
-    #             mz_bf.set_name(rmzbn)
-    #             mz_bf.position.setZ(mz_bf.position.z() + bf.position.z())
-    #             motion.copy_interpolation(bf, mz_bf, MBezierUtils.BZ_TYPE_MZ)
-    #             motion.regist_bf(mz_bf, mz_bf.name, fno, copy_interpolation=True)
-
-    #         if fno // 2000 > prev_sep_fno and fnos[-1] > 0:
-    #             logger.info("-- %sフレーム目:終了(%s％)【%s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
-    #             prev_sep_fno = fno // 2000
-
-    #     # 元のボーン削除
-    #     del motion.bones[bone_name]
-        
-    #     return True
-
-    # スタンス用細分化
-    def prepare_join_stance(self, motion: VmdMotion, target_bone_name: str):
-        fnos = motion.get_bone_fnos(target_bone_name)
-
-        for fidx, fno in enumerate(fnos):
-            if fidx == 0:
-                continue
-
-            prev_bf = motion.bones[target_bone_name][fnos[fidx - 1]]
-            bf = motion.bones[target_bone_name][fno]
-            diff_degree = abs(prev_bf.rotation.toDegree() - bf.rotation.toDegree())
-
-            if diff_degree >= 150:
-                # 回転量が約150度以上の場合、半分に分割しておく
-                half_fno = prev_bf.fno + round((bf.fno - prev_bf.fno) / 2)
-
-                if prev_bf.fno < half_fno < bf.fno:
-                    # キーが追加できる状態であれば、追加
-                    half_bf = motion.calc_bf(target_bone_name, half_fno)
-                    motion.regist_bf(half_bf, target_bone_name, half_fno)
-
-    # 不要キー削除
-    def remove_unnecessary_bf(self, bone_name: str):
-        try:
-            self.options.motion.remove_unnecessary_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
-                                                      self.options.model.bones[bone_name].getTranslatable())
-
-            return True
-        except MKilledException as ke:
-            raise ke
-        except SizingException as se:
-            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
-            return se
-        except Exception as e:
-            import traceback
-            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
-            raise e
-
 

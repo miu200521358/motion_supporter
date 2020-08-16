@@ -137,6 +137,8 @@ class ParentPanel(BasePanel):
 
     # 多段分割変換
     def on_convert(self, event: wx.Event):
+        self.timer.Stop()
+        self.Unbind(wx.EVT_TIMER, id=TIMER_ID)
         # フォーム無効化
         self.disable()
         # タブ固定
@@ -157,7 +159,6 @@ class ParentPanel(BasePanel):
         result = self.parent_vmd_file_ctrl.is_valid() and self.parent_model_file_ctrl.is_valid() and result
 
         if not result:
-            self.timer.Stop()
             # 終了音
             self.frame.sound_finish()
             # タブ移動可
@@ -183,8 +184,6 @@ class ParentPanel(BasePanel):
             # プログレス非表示
             self.gauge_ctrl.SetValue(0)
 
-            self.timer.Stop()
-
             logger.warning("全親移植を中断します。", decoration=MLogger.DECORATION_BOX)
             self.parent_btn_ctrl.SetLabel("全親移植")
             
@@ -200,15 +199,11 @@ class ParentPanel(BasePanel):
             self.parent_btn_ctrl.SetLabel("全親移植停止")
             self.parent_btn_ctrl.Enable()
 
-            self.timer.Stop()
-
-            self.convert_parent_worker = ParentWorkerThread(self.frame, ParentThreadEvent, self.frame.is_saving)
+            self.convert_parent_worker = ParentWorkerThread(self.frame, ParentThreadEvent, self.frame.is_saving, self.frame.is_out_log)
             self.convert_parent_worker.start()
             
             event.Skip()
         else:
-            self.timer.Stop()
-            
             logger.error("まだ処理が実行中です。終了してから再度実行してください。", decoration=MLogger.DECORATION_BOX)
             event.Skip(False)
 

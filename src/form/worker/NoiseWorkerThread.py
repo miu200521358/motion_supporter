@@ -19,12 +19,13 @@ logger = MLogger(__name__)
 
 class NoiseWorkerThread(BaseWorkerThread):
 
-    def __init__(self, frame: wx.Frame, result_event: wx.Event, is_exec_saving: bool):
+    def __init__(self, frame: wx.Frame, result_event: wx.Event, is_exec_saving: bool, is_out_log: bool):
         self.elapsed_time = 0
         self.frame = frame
         self.result_event = result_event
         self.gauge_ctrl = frame.noise_panel_ctrl.gauge_ctrl
         self.is_exec_saving = is_exec_saving
+        self.is_out_log = is_out_log
         self.options = None
 
         super().__init__(frame, self.result_event, frame.noise_panel_ctrl.console_ctrl)

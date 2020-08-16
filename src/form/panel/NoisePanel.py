@@ -24,6 +24,7 @@ class NoisePanel(BasePanel):
         
     def __init__(self, frame: wx.Frame, noise: wx.Notebook, tab_idx: int):
         super().__init__(frame, noise, tab_idx)
+        self.timer = wx.Timer(self, TIMER_ID)
         self.convert_noise_worker = None
 
         self.header_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -144,12 +145,13 @@ class NoisePanel(BasePanel):
     
     # 多段分割変換
     def on_convert_noise(self, event: wx.Event):
-        self.timer = wx.Timer(self, TIMER_ID)
         self.timer.Start(200)
         self.Bind(wx.EVT_TIMER, self.on_convert, id=TIMER_ID)
 
     # 多段分割変換
     def on_convert(self, event: wx.Event):
+        self.timer.Stop()
+        self.Unbind(wx.EVT_TIMER, id=TIMER_ID)
         # フォーム無効化
         self.disable()
         # タブ固定
@@ -169,7 +171,6 @@ class NoisePanel(BasePanel):
         result = self.noise_vmd_file_ctrl.is_valid() and result
 
         if not result:
-            self.timer.Stop()
             # 終了音
             self.frame.sound_finish()
             # タブ移動可
@@ -195,8 +196,6 @@ class NoisePanel(BasePanel):
             # プログレス非表示
             self.gauge_ctrl.SetValue(0)
 
-            self.timer.Stop()
-
             logger.warning("ゆらぎ複製を中断します。", decoration=MLogger.DECORATION_BOX)
             self.noise_btn_ctrl.SetLabel("ゆらぎ複製")
             
@@ -212,15 +211,11 @@ class NoisePanel(BasePanel):
             self.noise_btn_ctrl.SetLabel("ゆらぎ複製停止")
             self.noise_btn_ctrl.Enable()
 
-            self.timer.Stop()
-
-            self.convert_noise_worker = NoiseWorkerThread(self.frame, NoiseThreadEvent, self.frame.is_saving)
+            self.convert_noise_worker = NoiseWorkerThread(self.frame, NoiseThreadEvent, self.frame.is_saving, self.frame.is_out_log)
             self.convert_noise_worker.start()
             
             event.Skip()
         else:
-            self.timer.Stop()
-            
             logger.error("まだ処理が実行中です。終了してから再度実行してください。", decoration=MLogger.DECORATION_BOX)
             event.Skip(False)
 

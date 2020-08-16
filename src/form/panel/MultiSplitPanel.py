@@ -26,6 +26,7 @@ class MultiSplitPanel(BasePanel):
         
     def __init__(self, frame: wx.Frame, multi_split: wx.Notebook, tab_idx: int):
         super().__init__(frame, multi_split, tab_idx)
+        self.timer = wx.Timer(self, TIMER_ID)
         self.convert_multi_split_worker = None
 
         self.header_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -126,25 +127,27 @@ class MultiSplitPanel(BasePanel):
             self.bone_target_btn_ctrl.Enable()
             # リストクリア
             self.bone_target_txt_ctrl.SetValue("")
-            # リスト再生成
+            # ボーン選択用ダイアログ
+            self.bone_dialog.Destroy()
+            self.bone_dialog = TargetBoneDialog(self.frame, self)
             self.bone_dialog.initialize()
         else:
-            logger.error("対象モーションVMD/VPDもしくは適用モデルPMXが未指定です。", decoration=MLogger.DECORATION_BOX)
+            if not self.vmd_file_ctrl.data or not self.model_file_ctrl.data:
+                logger.error("対象モーションVMD/VPDもしくは適用モデルPMXが未指定です。", decoration=MLogger.DECORATION_BOX)
+                self.enable()
+                return
 
         self.enable()
 
         if self.bone_dialog.ShowModal() == wx.ID_CANCEL:
             return     # the user changed their mind
 
-        # 一旦クリア
-        self.bone_target_txt_ctrl.SetValue("")
-
         # 選択されたボーンリストを入力欄に設定
         bone_list = self.bone_dialog.get_bone_list()
 
         selections = ["{0} → 【回転X: {1}】【回転Y: {2}】【回転Z: {3}】【移動X: {4}】【移動Y: {5}】【移動Z: {6}】" \
                       .format(bset[0], bset[1], bset[2], bset[3], bset[4], bset[5], bset[6]) for bset in bone_list]
-        self.bone_target_txt_ctrl.WriteText('\n'.join(selections))
+        self.bone_target_txt_ctrl.SetValue('\n'.join(selections))
 
         self.bone_dialog.Hide()
 
@@ -186,12 +189,13 @@ class MultiSplitPanel(BasePanel):
         return False
     
     def on_convert_multi_split(self, event: wx.Event):
-        self.timer = wx.Timer(self, TIMER_ID)
         self.timer.Start(200)
         self.Bind(wx.EVT_TIMER, self.on_convert, id=TIMER_ID)
 
     # 多段分割変換
     def on_convert(self, event: wx.Event):
+        self.timer.Stop()
+        self.Unbind(wx.EVT_TIMER, id=TIMER_ID)
         # フォーム無効化
         self.disable()
         # タブ固定
@@ -217,8 +221,6 @@ class MultiSplitPanel(BasePanel):
             result = False
 
         if not result:
-            self.timer.Stop()
-
             # 終了音
             self.frame.sound_finish()
             # タブ移動可
@@ -244,8 +246,6 @@ class MultiSplitPanel(BasePanel):
             # プログレス非表示
             self.gauge_ctrl.SetValue(0)
 
-            self.timer.Stop()
-
             logger.warning("多段分割を中断します。", decoration=MLogger.DECORATION_BOX)
             self.multi_split_btn_ctrl.SetLabel("多段分割")
             
@@ -261,15 +261,11 @@ class MultiSplitPanel(BasePanel):
             self.multi_split_btn_ctrl.SetLabel("多段分割停止")
             self.multi_split_btn_ctrl.Enable()
 
-            self.timer.Stop()
-
-            self.convert_multi_split_worker = MultiSplitWorkerThread(self.frame, MultiSplitThreadEvent, self.frame.is_saving)
+            self.convert_multi_split_worker = MultiSplitWorkerThread(self.frame, MultiSplitThreadEvent, self.frame.is_saving, self.frame.is_out_log)
             self.convert_multi_split_worker.start()
             
             event.Skip()
         else:
-            self.timer.Stop()
-            
             logger.error("まだ処理が実行中です。終了してから再度実行してください。", decoration=MLogger.DECORATION_BOX)
             event.Skip(False)
 

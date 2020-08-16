@@ -390,7 +390,7 @@ class VmdMotion():
             fno = fnos[1]           # 次のフレーム番号
             fill_bfs = []
             for fidx, fno in enumerate(fnos):
-                prev_bf = self.calc_bf(bone_name, sfno)    # 繋ぐ元のbf
+                prev_bf = self.calc_bf(bone_name, sfno)         # 繋ぐ元のbf
                 now_bf = self.calc_bf(bone_name, fno)           # 繋ぐ対象のbf
                 next_bf = self.calc_bf(bone_name, fno + 1)      # 繋ぐ先のbf
                 is_next_key = next_bf.key                       # nextの有効有無

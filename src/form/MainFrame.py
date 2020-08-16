@@ -83,9 +83,9 @@ class MainFrame(wx.Frame):
         self.multi_split_panel_ctrl = MultiSplitPanel(self, self.note_ctrl, 9)
         self.note_ctrl.AddPage(self.multi_split_panel_ctrl, u"多段分割", False)
         
-        # # 多段統合タブ
-        # self.multi_join_panel_ctrl = MultiJoinPanel(self, self.note_ctrl, 9)
-        # self.note_ctrl.AddPage(self.multi_join_panel_ctrl, u"多段統合", False)
+        # 多段統合タブ
+        self.multi_join_panel_ctrl = MultiJoinPanel(self, self.note_ctrl, 9)
+        self.note_ctrl.AddPage(self.multi_join_panel_ctrl, u"多段統合", False)
         
         # # IKtoFKタブ
         # self.ik2fk_panel_ctrl = IKtoFKPanel(self, self.note_ctrl, 9)

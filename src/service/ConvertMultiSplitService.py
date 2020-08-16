@@ -38,7 +38,7 @@ class ConvertMultiSplitService():
             service_data_txt = "{service_data_txt}　対象ボーン: {target_bones}\n".format(service_data_txt=service_data_txt,
                                     target_bones='\n'.join(selections)) # noqa
 
-            logger.info("多段分割", decoration=MLogger.DECORATION_LINE)
+            logger.info(service_data_txt, decoration=MLogger.DECORATION_BOX)
 
             motion = self.options.motion
             model = self.options.model
@@ -80,70 +80,94 @@ class ConvertMultiSplitService():
         motion = self.options.motion
         model = self.options.model
 
-        # ローカルX軸
-        local_x_axis = model.get_local_x_axis(bone_name)
-        prev_sep_fno = 0
-
         # 事前に全打ち
-        motion.regist_full_bf(0, [bone_name], offset=2)
-        fnos = motion.get_bone_fnos(bone_name)
+        fnos = motion.get_differ_fnos(0, [bone_name], limit_degrees=10, limit_length=0.1)
+
+        prev_sep_fno = 0
+        for fno in fnos:
+            bf = motion.calc_bf(bone_name, fno)
+            motion.regist_bf(bf, bone_name, fno)
+
+            if model.bones[bone_name].getRotatable():
+                rx_bf = motion.calc_bf(rrxbn, fno)
+                motion.copy_interpolation(bf, rx_bf, MBezierUtils.BZ_TYPE_R)
+                motion.regist_bf(rx_bf, rx_bf.name, fno, copy_interpolation=True)
+
+                ry_bf = motion.calc_bf(rrybn, fno)
+                motion.copy_interpolation(bf, ry_bf, MBezierUtils.BZ_TYPE_R)
+                motion.regist_bf(ry_bf, ry_bf.name, fno, copy_interpolation=True)
+                
+                rz_bf = motion.calc_bf(rrzbn, fno)
+                motion.copy_interpolation(bf, rz_bf, MBezierUtils.BZ_TYPE_R)
+                motion.regist_bf(rz_bf, rz_bf.name, fno, copy_interpolation=True)
+                
+            if model.bones[bone_name].getTranslatable():
+                mx_bf = motion.calc_bf(rmxbn, fno)
+                motion.copy_interpolation(bf, mx_bf, MBezierUtils.BZ_TYPE_MX)
+                motion.regist_bf(mx_bf, mx_bf.name, fno, copy_interpolation=True)
+
+                my_bf = motion.calc_bf(rmybn, fno)
+                motion.copy_interpolation(bf, my_bf, MBezierUtils.BZ_TYPE_MY)
+                motion.regist_bf(my_bf, my_bf.name, fno, copy_interpolation=True)
+
+                mz_bf = motion.calc_bf(rmzbn, fno)
+                motion.copy_interpolation(bf, mz_bf, MBezierUtils.BZ_TYPE_MZ)
+                motion.regist_bf(mz_bf, mz_bf.name, fno, copy_interpolation=True)
+
+            if fno // 1000 > prev_sep_fno and fnos[-1] > 0:
+                logger.info("-- %sフレーム目:終了(%s％)【キーフレ追加 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
+                prev_sep_fno = fno // 1000
 
         logger.info("-- 準備完了【%s】", bone_name)
 
+        # ローカルX軸
+        local_x_axis = model.get_local_x_axis(bone_name)
+
+        prev_sep_fno = 0
         for fno in fnos:
-            bf = motion.bones[bone_name][fno]
+            bf = motion.calc_bf(bone_name, fno)
 
             if model.bones[bone_name].getRotatable():
                 # 回転を分ける
                 x_qq, y_qq, z_qq, _ = MServiceUtils.separate_local_qq(fno, bone_name, bf.rotation, local_x_axis)
 
                 if len(rrxbn) > 0:
-                    rx_bf = VmdBoneFrame(fno)
-                    rx_bf.set_name(rrxbn)
-                    rx_bf.rotation *= x_qq
-                    motion.copy_interpolation(bf, rx_bf, MBezierUtils.BZ_TYPE_R)
-                    motion.regist_bf(rx_bf, rx_bf.name, fno, copy_interpolation=True)
+                    rx_bf = motion.calc_bf(rrxbn, fno)
+                    rx_bf.rotation = x_qq * rx_bf.rotation
+                    motion.regist_bf(rx_bf, rx_bf.name, fno)
 
                 if len(rrybn) > 0:
-                    ry_bf = VmdBoneFrame(fno)
-                    ry_bf.set_name(rrybn)
-                    ry_bf.rotation *= y_qq
-                    motion.copy_interpolation(bf, ry_bf, MBezierUtils.BZ_TYPE_R)
-                    motion.regist_bf(ry_bf, ry_bf.name, fno, copy_interpolation=True)
+                    ry_bf = motion.calc_bf(rrybn, fno)
+                    ry_bf.rotation = y_qq * ry_bf.rotation
+                    motion.regist_bf(ry_bf, ry_bf.name, fno)
 
                 if len(rrzbn) > 0:
-                    rz_bf = VmdBoneFrame(fno)
-                    rz_bf.set_name(rrzbn)
-                    rz_bf.rotation *= z_qq
-                    motion.copy_interpolation(bf, rz_bf, MBezierUtils.BZ_TYPE_R)
-                    motion.regist_bf(rz_bf, rz_bf.name, fno, copy_interpolation=True)
+                    rz_bf = motion.calc_bf(rrzbn, fno)
+                    rz_bf.rotation = z_qq * rz_bf.rotation
+                    motion.regist_bf(rz_bf, rz_bf.name, fno)
             
             if model.bones[bone_name].getTranslatable():
                 # 移動を分ける
                 if len(rmxbn) > 0:
-                    mx_bf = VmdBoneFrame(fno)
-                    mx_bf.set_name(rmxbn)
+                    mx_bf = motion.calc_bf(rmxbn, fno)
                     mx_bf.position.setX(mx_bf.position.x() + bf.position.x())
-                    motion.copy_interpolation(bf, mx_bf, MBezierUtils.BZ_TYPE_MX)
-                    motion.regist_bf(mx_bf, mx_bf.name, fno, copy_interpolation=True)
+                    motion.regist_bf(mx_bf, mx_bf.name, fno)
 
                 if len(rmybn) > 0:
-                    my_bf = VmdBoneFrame(fno)
-                    my_bf.set_name(rmybn)
+                    my_bf = motion.calc_bf(rmybn, fno)
                     my_bf.position.setY(my_bf.position.y() + bf.position.y())
-                    motion.copy_interpolation(bf, my_bf, MBezierUtils.BZ_TYPE_MY)
-                    motion.regist_bf(my_bf, my_bf.name, fno, copy_interpolation=True)
+                    motion.regist_bf(my_bf, my_bf.name, fno)
 
                 if len(rmzbn) > 0:
-                    mz_bf = VmdBoneFrame(fno)
-                    mz_bf.set_name(rmzbn)
+                    mz_bf = motion.calc_bf(rmzbn, fno)
                     mz_bf.position.setZ(mz_bf.position.z() + bf.position.z())
-                    motion.copy_interpolation(bf, mz_bf, MBezierUtils.BZ_TYPE_MZ)
-                    motion.regist_bf(mz_bf, mz_bf.name, fno, copy_interpolation=True)
+                    motion.regist_bf(mz_bf, mz_bf.name, fno)
 
             if fno // 1000 > prev_sep_fno and fnos[-1] > 0:
                 logger.info("-- %sフレーム目:終了(%s％)【多段分割 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
                 prev_sep_fno = fno // 1000
+
+        logger.info("-- 分割完了【%s】", bone_name)
 
         # 元のボーン削除
         del motion.bones[bone_name]
@@ -175,102 +199,11 @@ class ConvertMultiSplitService():
         
         return True
 
-    # # 多段分割処理実行
-    # def convert_multi_split(self, bone_name: str, rrxbn: str, rrybn: str, rrzbn: str, rmxbn: str, rmybn: str, rmzbn: str):
-    #     logger.info("多段分割", decoration=MLogger.DECORATION_LINE)
-
-    #     motion = self.options.motion
-    #     model = self.options.model
-
-    #     fnos = motion.get_bone_fnos(bone_name)
-    #     # ローカルX軸
-    #     local_x_axis = model.get_local_x_axis(bone_name)
-    #     prev_sep_fno = 0
-
-    #     # 事前に細分化
-    #     self.prepare_split_stance(motion, bone_name)
-    #     logger.info("-- 準備完了【%s】", bone_name)
-
-    #     for fno in fnos:
-    #         bf = motion.bones[bone_name][fno]
-
-    #         if model.bones[bone_name].getRotatable():
-    #             # 回転を分ける
-    #             x_qq, y_qq, z_qq, _ = MServiceUtils.separate_local_qq(fno, bone_name, bf.rotation, local_x_axis)
-
-    #             rx_bf = VmdBoneFrame(fno)
-    #             rx_bf.set_name(rrxbn)
-    #             rx_bf.rotation *= x_qq
-    #             motion.copy_interpolation(bf, rx_bf, MBezierUtils.BZ_TYPE_R)
-    #             motion.regist_bf(rx_bf, rx_bf.name, fno, copy_interpolation=True)
-
-    #             ry_bf = VmdBoneFrame(fno)
-    #             ry_bf.set_name(rrybn)
-    #             ry_bf.rotation *= y_qq
-    #             motion.copy_interpolation(bf, ry_bf, MBezierUtils.BZ_TYPE_R)
-    #             motion.regist_bf(ry_bf, ry_bf.name, fno, copy_interpolation=True)
-
-    #             rz_bf = VmdBoneFrame(fno)
-    #             rz_bf.set_name(rrzbn)
-    #             rz_bf.rotation *= z_qq
-    #             motion.copy_interpolation(bf, rz_bf, MBezierUtils.BZ_TYPE_R)
-    #             motion.regist_bf(rz_bf, rz_bf.name, fno, copy_interpolation=True)
-            
-    #         if model.bones[bone_name].getTranslatable():
-    #             # 移動を分ける
-    #             mx_bf = VmdBoneFrame(fno)
-    #             mx_bf.set_name(rmxbn)
-    #             mx_bf.position.setX(mx_bf.position.x() + bf.position.x())
-    #             motion.copy_interpolation(bf, mx_bf, MBezierUtils.BZ_TYPE_MX)
-    #             motion.regist_bf(mx_bf, mx_bf.name, fno, copy_interpolation=True)
-
-    #             my_bf = VmdBoneFrame(fno)
-    #             my_bf.set_name(rmybn)
-    #             my_bf.position.setY(my_bf.position.y() + bf.position.y())
-    #             motion.copy_interpolation(bf, my_bf, MBezierUtils.BZ_TYPE_MY)
-    #             motion.regist_bf(my_bf, my_bf.name, fno, copy_interpolation=True)
-
-    #             mz_bf = VmdBoneFrame(fno)
-    #             mz_bf.set_name(rmzbn)
-    #             mz_bf.position.setZ(mz_bf.position.z() + bf.position.z())
-    #             motion.copy_interpolation(bf, mz_bf, MBezierUtils.BZ_TYPE_MZ)
-    #             motion.regist_bf(mz_bf, mz_bf.name, fno, copy_interpolation=True)
-
-    #         if fno // 2000 > prev_sep_fno and fnos[-1] > 0:
-    #             logger.info("-- %sフレーム目:終了(%s％)【%s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
-    #             prev_sep_fno = fno // 2000
-
-    #     # 元のボーン削除
-    #     del motion.bones[bone_name]
-        
-    #     return True
-
-    # スタンス用細分化
-    def prepare_split_stance(self, motion: VmdMotion, target_bone_name: str):
-        fnos = motion.get_bone_fnos(target_bone_name)
-
-        for fidx, fno in enumerate(fnos):
-            if fidx == 0:
-                continue
-
-            prev_bf = motion.bones[target_bone_name][fnos[fidx - 1]]
-            bf = motion.bones[target_bone_name][fno]
-            diff_degree = abs(prev_bf.rotation.toDegree() - bf.rotation.toDegree())
-
-            if diff_degree >= 150:
-                # 回転量が約150度以上の場合、半分に分割しておく
-                half_fno = prev_bf.fno + round((bf.fno - prev_bf.fno) / 2)
-
-                if prev_bf.fno < half_fno < bf.fno:
-                    # キーが追加できる状態であれば、追加
-                    half_bf = motion.calc_bf(target_bone_name, half_fno)
-                    motion.regist_bf(half_bf, target_bone_name, half_fno)
-
     # 不要キー削除
     def remove_unnecessary_bf(self, bone_name: str):
         try:
             self.options.motion.remove_unnecessary_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
-                                                      self.options.model.bones[bone_name].getTranslatable(), offset=5, rot_diff_limit=10)
+                                                      self.options.model.bones[bone_name].getTranslatable())
 
             return True
         except MKilledException as ke:

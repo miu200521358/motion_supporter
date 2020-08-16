@@ -16,6 +16,7 @@ from utils import MFormUtils, MFileUtils
 from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__)
+TIMER_ID = wx.NewId()
 
 # イベント定義
 (MultiJoinThreadEvent, EVT_SMOOTH_THREAD) = wx.lib.newevent.NewEvent()
@@ -25,12 +26,13 @@ class MultiJoinPanel(BasePanel):
         
     def __init__(self, frame: wx.Frame, multi_join: wx.Notebook, tab_idx: int):
         super().__init__(frame, multi_join, tab_idx)
+        self.timer = wx.Timer(self, TIMER_ID)
         self.convert_multi_join_worker = None
 
         self.header_sizer = wx.BoxSizer(wx.VERTICAL)
 
-        self.description_txt = wx.StaticText(self, wx.ID_ANY, u"モーションの指定ボーンの移動量と回転量をXYZに統合します。統合するボーンは「ボーン指定」ボタンから定義できます。" \
-                                             + "\n回転ボーンは、YXZの順番で多段化したボーンを適用すると、回転結果がオリジナルと一致します。", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.description_txt = wx.StaticText(self, wx.ID_ANY, u"モーションの指定ボーンの移動量と回転量をXYZに統合します。統合するボーンは「ボーン指定」ボタンから定義できます。", \
+                                             wx.DefaultPosition, wx.DefaultSize, 0)
         self.header_sizer.Add(self.description_txt, 0, wx.ALL, 5)
 
         self.static_line01 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
@@ -63,7 +65,7 @@ class MultiJoinPanel(BasePanel):
         self.setting_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
         # ボーン名指定
-        self.bone_target_txt_ctrl = wx.TextCtrl(self, wx.ID_ANY, "", wx.DefaultPosition, (450, 80), wx.HSCROLL | wx.VSCROLL | wx.TE_MULTILINE | wx.TE_READONLY)
+        self.bone_target_txt_ctrl = wx.TextCtrl(self, wx.ID_ANY, "", wx.DefaultPosition, (450, 60), wx.HSCROLL | wx.VSCROLL | wx.TE_MULTILINE | wx.TE_READONLY)
         self.bone_target_txt_ctrl.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DLIGHT))
         self.setting_sizer.Add(self.bone_target_txt_ctrl, 1, wx.EXPAND | wx.ALL, 5)
 
@@ -81,8 +83,9 @@ class MultiJoinPanel(BasePanel):
 
         # 実行ボタン
         self.multi_join_btn_ctrl = wx.Button(self, wx.ID_ANY, u"多段統合", wx.DefaultPosition, wx.Size(200, 50), 0)
-        self.multi_join_btn_ctrl.SetToolTip(u"キーフレを多段用に統合したモーションを生成します")
-        self.multi_join_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_convert_multi_join)
+        self.multi_join_btn_ctrl.SetToolTip(u"キーフレを多段から統合したモーションを生成します")
+        self.multi_join_btn_ctrl.Bind(wx.EVT_LEFT_DOWN, self.on_convert_multi_join)
+        self.multi_join_btn_ctrl.Bind(wx.EVT_LEFT_DCLICK, self.on_doubleclick)
         btn_sizer.Add(self.multi_join_btn_ctrl, 0, wx.ALL, 5)
 
         self.sizer.Add(btn_sizer, 0, wx.ALIGN_CENTER | wx.SHAPED, 5)
@@ -109,18 +112,42 @@ class MultiJoinPanel(BasePanel):
         self.frame.Bind(EVT_SMOOTH_THREAD, self.on_convert_multi_join_result)
     
     def on_click_bone_target(self, event: wx.Event):
+        self.disable()
+
+        # VMD読み込み
+        sys.stdout = self.console_ctrl
+        self.vmd_file_ctrl.load()
+        # PMX読み込み
+        self.model_file_ctrl.load()
+
+        if (self.vmd_file_ctrl.data and self.model_file_ctrl.data and \
+                (self.vmd_file_ctrl.data.digest != self.bone_dialog.vmd_digest or self.model_file_ctrl.data.digest != self.bone_dialog.pmx_digest)):
+
+            # データが揃ってたら押下可能
+            self.bone_target_btn_ctrl.Enable()
+            # リストクリア
+            self.bone_target_txt_ctrl.SetValue("")
+            # ボーン選択用ダイアログ
+            self.bone_dialog.Destroy()
+            self.bone_dialog = TargetBoneDialog(self.frame, self)
+            self.bone_dialog.initialize()
+        else:
+            if not self.vmd_file_ctrl.data or not self.model_file_ctrl.data:
+                logger.error("対象モーションVMD/VPDもしくは適用モデルPMXが未指定です。", decoration=MLogger.DECORATION_BOX)
+                self.enable()
+                return
+
+        self.enable()
+
         if self.bone_dialog.ShowModal() == wx.ID_CANCEL:
             return     # the user changed their mind
-
-        # 一旦クリア
-        self.bone_target_txt_ctrl.SetValue("")
 
         # 選択されたボーンリストを入力欄に設定
         bone_list = self.bone_dialog.get_bone_list()
 
-        selections = ["{0} → 【回転X: {1}】【回転Y: {2}】【回転Z: {3}】【移動X: {4}】【移動Y: {5}】【移動Z: {6}】" \
+        selections = ["{0} ← 【回転X: {1}】【回転Y: {2}】【回転Z: {3}】【移動X: {4}】【移動Y: {5}】【移動Z: {6}】" \
                       .format(bset[0], bset[1], bset[2], bset[3], bset[4], bset[5], bset[6]) for bset in bone_list]
-        self.bone_target_txt_ctrl.WriteText('\n'.join(selections))
+        self.bone_target_txt_ctrl.SetValue('\n'.join(selections))
 
         self.bone_dialog.Hide()
 
@@ -139,26 +166,6 @@ class MultiJoinPanel(BasePanel):
         if len(output_multi_join_vmd_path) >= 255 and os.name == "nt":
             logger.error("生成予定のファイルパスがWindowsの制限を超えています。\n生成予定パス: {0}".format(output_multi_join_vmd_path), decoration=MLogger.DECORATION_BOX)
 
-        self.disable()
-
-        # VMD読み込み
-        sys.stdout = self.console_ctrl
-        self.vmd_file_ctrl.load()
-        # PMX読み込み
-        self.model_file_ctrl.load()
-
-        if (self.vmd_file_ctrl.data and self.model_file_ctrl.data and \
-                (self.vmd_file_ctrl.data.digest != self.bone_dialog.vmd_digest or self.model_file_ctrl.data.digest != self.bone_dialog.pmx_digest)):
-
-            # データが揃ってたら押下可能
-            self.bone_target_btn_ctrl.Enable()
-            # リストクリア
-            self.bone_target_txt_ctrl.SetValue("")
-            # リスト再生成
-            self.bone_dialog.initialize()
-
-        self.enable()
-
     # フォーム無効化
     def disable(self):
         self.vmd_file_ctrl.disable()
@@ -175,8 +182,20 @@ class MultiJoinPanel(BasePanel):
         self.bone_target_btn_ctrl.Enable()
         self.multi_join_btn_ctrl.Enable()
 
-    # 多段統合変換
+    def on_doubleclick(self, event: wx.Event):
+        self.timer.Stop()
+        logger.warning("ダブルクリックされました。", decoration=MLogger.DECORATION_BOX)
+        event.Skip(False)
+        return False
+    
     def on_convert_multi_join(self, event: wx.Event):
+        self.timer.Start(200)
+        self.Bind(wx.EVT_TIMER, self.on_convert, id=TIMER_ID)
+
+    # 多段統合変換
+    def on_convert(self, event: wx.Event):
+        self.timer.Stop()
+        self.Unbind(wx.EVT_TIMER, id=TIMER_ID)
         # フォーム無効化
         self.disable()
         # タブ固定
@@ -185,8 +204,6 @@ class MultiJoinPanel(BasePanel):
         self.console_ctrl.Clear()
         # 出力先を多段統合パネルのコンソールに変更
         sys.stdout = self.console_ctrl
-
-        wx.GetApp().Yield()
 
         self.vmd_file_ctrl.save()
         self.model_file_ctrl.save()
@@ -214,12 +231,43 @@ class MultiJoinPanel(BasePanel):
             return result
 
         # 多段統合変換開始
-        if self.convert_multi_join_worker:
-            logger.error("まだ処理が実行中です。終了してから再度実行してください。", decoration=MLogger.DECORATION_BOX)
-        else:
-            # 別スレッドで実行
-            self.convert_multi_join_worker = MultiJoinWorkerThread(self.frame, MultiJoinThreadEvent, self.frame.is_saving)
+        if self.multi_join_btn_ctrl.GetLabel() == "多段統合停止" and self.convert_multi_join_worker:
+            # フォーム無効化
+            self.disable()
+            # 停止状態でボタン押下時、停止
+            self.convert_multi_join_worker.stop()
+
+            # タブ移動可
+            self.frame.release_tab()
+            # フォーム有効化
+            self.frame.enable()
+            # ワーカー終了
+            self.convert_multi_join_worker = None
+            # プログレス非表示
+            self.gauge_ctrl.SetValue(0)
+
+            logger.warning("多段統合を中断します。", decoration=MLogger.DECORATION_BOX)
+            self.multi_join_btn_ctrl.SetLabel("多段統合")
+            
+            event.Skip(False)
+        elif not self.convert_multi_join_worker:
+            # フォーム無効化
+            self.disable()
+            # タブ固定
+            self.fix_tab()
+            # コンソールクリア
+            self.console_ctrl.Clear()
+            # ラベル変更
+            self.multi_join_btn_ctrl.SetLabel("多段統合停止")
+            self.multi_join_btn_ctrl.Enable()
+
+            self.convert_multi_join_worker = MultiJoinWorkerThread(self.frame, MultiJoinThreadEvent, self.frame.is_saving, self.frame.is_out_log)
             self.convert_multi_join_worker.start()
+            
+            event.Skip()
+        else:
+            logger.error("まだ処理が実行中です。終了してから再度実行してください。", decoration=MLogger.DECORATION_BOX)
+            event.Skip(False)
 
         return result
 
@@ -239,6 +287,9 @@ class MultiJoinPanel(BasePanel):
         self.convert_multi_join_worker = None
         # プログレス非表示
         self.gauge_ctrl.SetValue(0)
+        # ラベル変更
+        self.multi_join_btn_ctrl.SetLabel("多段統合")
+        self.multi_join_btn_ctrl.Enable()
 
     def show_worked_time(self):
         # 経過秒数を時分秒に変換
@@ -324,7 +375,7 @@ class TargetBoneDialog(wx.Dialog):
         self.org_model_name_txt.Wrap(-1)
         self.grid_sizer.Add(self.org_model_name_txt, 0, wx.ALL, 5)
 
-        self.name_arrow_txt = wx.StaticText(self.window, wx.ID_ANY, u"　→　", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.name_arrow_txt = wx.StaticText(self.window, wx.ID_ANY, u"　←　", wx.DefaultPosition, wx.DefaultSize, 0)
         self.name_arrow_txt.Wrap(-1)
         self.grid_sizer.Add(self.name_arrow_txt, 0, wx.CENTER | wx.ALL, 5)
 
@@ -373,12 +424,12 @@ class TargetBoneDialog(wx.Dialog):
 
             for bone_name in self.panel.vmd_file_ctrl.data.bones.keys():
                 # 処理対象ボーン：有効なボーン
-                self.org_bones.append(bone_name)
+                self.rep_bones.append(bone_name)
         
             for bone_name, bone_data in self.panel.model_file_ctrl.data.bones.items():
                 if bone_data.getVisibleFlag():
                     # 処理対象ボーン：有効なボーン
-                    self.rep_bones.append(bone_name)
+                    self.org_bones.append(bone_name)
 
             # 一行追加
             self.add_line()
@@ -485,12 +536,12 @@ class TargetBoneDialog(wx.Dialog):
             logger.info("出力成功: %s" % output_bone_path)
 
             dialog = wx.MessageDialog(self.frame, "多段ボーンデータのエクスポートに成功しました \n'%s'" % (output_bone_path), style=wx.OK)
-            dialog.Show()
+            dialog.ShowModal()
             dialog.Destroy()
 
         except Exception:
             dialog = wx.MessageDialog(self.frame, "多段ボーンデータのエクスポートに失敗しました \n'%s'\n\n%s." % (output_bone_path, traceback.format_exc()), style=wx.OK)
-            dialog.Show()
+            dialog.ShowModal()
             dialog.Destroy()
 
     def on_add_line(self, event: wx.Event):
@@ -527,7 +578,7 @@ class TargetBoneDialog(wx.Dialog):
         self.grid_sizer.Add(self.org_choices[-1], 0, wx.ALL, 5)
 
         # 矢印
-        self.arrow_txt = wx.StaticText(self.window, wx.ID_ANY, u"　→　", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.arrow_txt = wx.StaticText(self.window, wx.ID_ANY, u"　←　", wx.DefaultPosition, wx.DefaultSize, 0)
         self.arrow_txt.Wrap(-1)
         self.grid_sizer.Add(self.arrow_txt, 0, wx.CENTER | wx.ALL, 5)
 
