@@ -15,7 +15,7 @@ from mmd.VmdWriter import VmdWriter
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from utils import MUtils, MServiceUtils, MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
-from utils.MException import SizingException
+from utils.MException import SizingException, MKilledException
 
 logger = MLogger(__name__, level=1)
 
@@ -54,6 +54,8 @@ class ConvertNoiseService():
                     return False
 
             return True
+        except MKilledException:
+            return False
         except SizingException as se:
             logger.error("ゆらぎ複製処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
         except Exception:

@@ -199,7 +199,7 @@ class VmdMotion():
         # ハッシュ値
         self.digest = None
     
-    def regist_full_bf(self, data_set_no: int, bone_name_list: str, offset=1):
+    def regist_full_bf(self, data_set_no: int, bone_name_list: list, offset=1):
         # 指定された全部のボーンのキーフレ取得
         fnos = self.get_bone_fnos(*bone_name_list)
         # オフセット単位でキーフレ計算
@@ -215,9 +215,13 @@ class VmdMotion():
                 bf = self.calc_bf(bone_name, fno)
                 self.regist_bf(bf, bone_name, fno)
 
-                if data_set_no > 0 and fno // 500 > prev_sep_fno and fnos[-1] > 0:
-                    logger.info("-- %sフレーム目:終了(%s％)【No.%s - 全打ち - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
-                    prev_sep_fno = fno // 500
+                if fno // 500 > prev_sep_fno and fnos[-1] > 0:
+                    if data_set_no == 0:
+                        logger.info("-- %sフレーム目:終了(%s％)【全打ち - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
+                        prev_sep_fno = fno // 500
+                    elif data_set_no > 0:
+                        logger.info("-- %sフレーム目:終了(%s％)【No.%s - 全打ち - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
+                        prev_sep_fno = fno // 500
     
     def get_differ_fnos(self, data_set_no: int, bone_name_list: str, limit_degrees: float, limit_length: float):
         limit_radians = math.cos(math.radians(limit_degrees))
@@ -368,7 +372,8 @@ class VmdMotion():
                 del self.bones[bone_name][fno]
 
     # 指定ボーンの不要キーを削除する
-    def remove_unnecessary_bf(self, data_set_no: int, bone_name: str, is_rot: bool, is_mov: bool, offset=0, start_fno=-1, end_fno=-1, is_show_log=True, is_force=False):
+    def remove_unnecessary_bf(self, data_set_no: int, bone_name: str, is_rot: bool, is_mov: bool, \
+                              offset=0, rot_diff_limit=0.1, mov_diff_limit=0.01, start_fno=-1, end_fno=-1, is_show_log=True, is_force=False):
         prev_sep_fno = 0
 
         # キーフレを取得する
@@ -444,7 +449,7 @@ class VmdMotion():
         logger.debug("remove_unnecessary_bf after: %s, %s, all: %s", bone_name, active_fnos, len(fnos))
 
     # 補間曲線込みでbfを結合できる場合、結合する
-    def join_bf(self, prev_bf: VmdBoneFrame, fill_bfs: list, next_bf: VmdBoneFrame, is_rot: bool, is_mov: bool, offset=0):
+    def join_bf(self, prev_bf: VmdBoneFrame, fill_bfs: list, next_bf: VmdBoneFrame, is_rot: bool, is_mov: bool, offset=0, rot_diff_limit=0.1, mov_diff_limit=0.01):
         rot_values = []
         x_values = []
         y_values = []
@@ -472,10 +477,10 @@ class VmdMotion():
             logger.test("f: %s, %s, z_values: %s", prev_bf.fno, prev_bf.name, z_values)
 
         # 結合したベジェ曲線
-        joined_rot_bzs = MBezierUtils.join_value_2_bezier(fill_bfs[-1].fno, next_bf.name, rot_values, offset=offset, diff_limit=0.1) if is_rot else True
-        joined_x_bzs = MBezierUtils.join_value_2_bezier(fill_bfs[-1].fno, next_bf.name, x_values, offset=offset, diff_limit=0.01) if is_mov else True
-        joined_y_bzs = MBezierUtils.join_value_2_bezier(fill_bfs[-1].fno, next_bf.name, y_values, offset=offset, diff_limit=0.01) if is_mov else True
-        joined_z_bzs = MBezierUtils.join_value_2_bezier(fill_bfs[-1].fno, next_bf.name, z_values, offset=offset, diff_limit=0.01) if is_mov else True
+        joined_rot_bzs = MBezierUtils.join_value_2_bezier(fill_bfs[-1].fno, next_bf.name, rot_values, offset=offset, diff_limit=rot_diff_limit) if is_rot else True
+        joined_x_bzs = MBezierUtils.join_value_2_bezier(fill_bfs[-1].fno, next_bf.name, x_values, offset=offset, diff_limit=mov_diff_limit) if is_mov else True
+        joined_y_bzs = MBezierUtils.join_value_2_bezier(fill_bfs[-1].fno, next_bf.name, y_values, offset=offset, diff_limit=mov_diff_limit) if is_mov else True
+        joined_z_bzs = MBezierUtils.join_value_2_bezier(fill_bfs[-1].fno, next_bf.name, z_values, offset=offset, diff_limit=mov_diff_limit) if is_mov else True
 
         if joined_rot_bzs and joined_x_bzs and joined_y_bzs and joined_z_bzs:
             # 結合できた場合、補間曲線をnextに設定
@@ -493,13 +498,16 @@ class VmdMotion():
         return False
 
     # 補間曲線分割ありで登録
-    def regist_bf(self, bf: VmdBoneFrame, bone_name: str, fno: int):
+    def regist_bf(self, bf: VmdBoneFrame, bone_name: str, fno: int, copy_interpolation=False):
         # 登録対象の場合のみ、補間曲線リセットで登録する
         regist_bf = self.calc_bf(bone_name, fno, is_reset_interpolation=True)
         regist_bf.position = bf.position.copy()
         regist_bf.rotation = bf.rotation.copy()
         regist_bf.org_position = bf.org_position.copy()
         regist_bf.org_rotation = bf.org_rotation.copy()
+        if copy_interpolation:
+            regist_bf.interpolation = cPickle.loads(cPickle.dumps(bf.interpolation, -1))
+            
         # キーを登録
         regist_bf.key = True
         self.bones[bone_name][fno] = regist_bf
@@ -727,6 +735,20 @@ class VmdMotion():
 
         # nextキーに設定
         self.reset_interpolation_parts(target_bone_name, next_bf, after_bz, x1_idxs, y1_idxs, x2_idxs, y2_idxs)
+    
+    # 補間曲線のコピー
+    def copy_interpolation(self, org_bf: VmdBoneFrame, rep_bf: VmdBoneFrame, bz_type: str):
+        bz_x1_idxs, bz_y1_idxs, bz_x2_idxs, bz_y2_idxs = MBezierUtils.from_bz_type(bz_type)
+
+        rep_bf.interpolation[bz_x1_idxs[0]] = rep_bf.interpolation[bz_x1_idxs[1]] = rep_bf.interpolation[bz_x1_idxs[2]] = rep_bf.interpolation[bz_x1_idxs[3]] \
+            = org_bf.interpolation[bz_x1_idxs[3]]
+        rep_bf.interpolation[bz_y1_idxs[0]] = rep_bf.interpolation[bz_y1_idxs[1]] = rep_bf.interpolation[bz_y1_idxs[2]] = rep_bf.interpolation[bz_y1_idxs[3]] \
+            = org_bf.interpolation[bz_y1_idxs[3]]
+
+        rep_bf.interpolation[bz_x2_idxs[0]] = rep_bf.interpolation[bz_x2_idxs[2]] = rep_bf.interpolation[bz_x2_idxs[2]] = rep_bf.interpolation[bz_x2_idxs[3]] \
+            = org_bf.interpolation[bz_x2_idxs[3]]
+        rep_bf.interpolation[bz_y2_idxs[0]] = rep_bf.interpolation[bz_y2_idxs[2]] = rep_bf.interpolation[bz_y2_idxs[2]] = rep_bf.interpolation[bz_y2_idxs[3]] \
+            = org_bf.interpolation[bz_y2_idxs[3]]
 
     # 補間曲線の再設定部品
     def reset_interpolation_parts(self, target_bone_name: str, bf: VmdBoneFrame, bzs: list, x1_idxs: list, y1_idxs: list, x2_idxs: list, y2_idxs: list):

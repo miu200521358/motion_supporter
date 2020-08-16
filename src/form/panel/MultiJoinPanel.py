@@ -11,26 +11,25 @@ from form.panel.BasePanel import BasePanel
 from form.parts.BaseFilePickerCtrl import BaseFilePickerCtrl
 from form.parts.HistoryFilePickerCtrl import HistoryFilePickerCtrl
 from form.parts.ConsoleCtrl import ConsoleCtrl
-from form.worker.MultiSplitWorkerThread import MultiSplitWorkerThread
+from form.worker.MultiJoinWorkerThread import MultiJoinWorkerThread
 from utils import MFormUtils, MFileUtils
 from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__)
-TIMER_ID = wx.NewId()
 
 # イベント定義
-(MultiSplitThreadEvent, EVT_SMOOTH_THREAD) = wx.lib.newevent.NewEvent()
+(MultiJoinThreadEvent, EVT_SMOOTH_THREAD) = wx.lib.newevent.NewEvent()
 
 
-class MultiSplitPanel(BasePanel):
+class MultiJoinPanel(BasePanel):
         
-    def __init__(self, frame: wx.Frame, multi_split: wx.Notebook, tab_idx: int):
-        super().__init__(frame, multi_split, tab_idx)
-        self.convert_multi_split_worker = None
+    def __init__(self, frame: wx.Frame, multi_join: wx.Notebook, tab_idx: int):
+        super().__init__(frame, multi_join, tab_idx)
+        self.convert_multi_join_worker = None
 
         self.header_sizer = wx.BoxSizer(wx.VERTICAL)
 
-        self.description_txt = wx.StaticText(self, wx.ID_ANY, u"モーションの指定ボーンの移動量と回転量をXYZに分割します。分割するボーンは「ボーン指定」ボタンから定義できます。" \
+        self.description_txt = wx.StaticText(self, wx.ID_ANY, u"モーションの指定ボーンの移動量と回転量をXYZに統合します。統合するボーンは「ボーン指定」ボタンから定義できます。" \
                                              + "\n回転ボーンは、YXZの順番で多段化したボーンを適用すると、回転結果がオリジナルと一致します。", wx.DefaultPosition, wx.DefaultSize, 0)
         self.header_sizer.Add(self.description_txt, 0, wx.ALL, 5)
 
@@ -40,7 +39,7 @@ class MultiSplitPanel(BasePanel):
         # 対象VMDファイルコントロール
         self.vmd_file_ctrl = HistoryFilePickerCtrl(self.frame, self, u"対象モーションVMD/VPD", u"対象モーションVMDファイルを開く", ("vmd", "vpd"), wx.FLP_DEFAULT_STYLE, \
                                                    u"調整したい対象モーションのVMDパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。", \
-                                                   file_model_spacer=46, title_parts_ctrl=None, title_parts2_ctrl=None, file_histories_key="multi_split_vmd", is_change_output=True, \
+                                                   file_model_spacer=46, title_parts_ctrl=None, title_parts2_ctrl=None, file_histories_key="multi_join_vmd", is_change_output=True, \
                                                    is_aster=False, is_save=False, set_no=1)
         self.vmd_file_ctrl.file_ctrl.Bind(wx.EVT_FILEPICKER_CHANGED, self.on_change_file)
         self.header_sizer.Add(self.vmd_file_ctrl.sizer, 1, wx.EXPAND, 0)
@@ -48,7 +47,7 @@ class MultiSplitPanel(BasePanel):
         # 対象PMXファイルコントロール
         self.model_file_ctrl = HistoryFilePickerCtrl(self.frame, self, u"適用モデルPMX", u"適用モデルPMXファイルを開く", ("pmx"), wx.FLP_DEFAULT_STYLE, \
                                                      u"モーションを適用したいモデルのPMXパスを指定してください。\n人体モデル以外にも適用可能です。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。", \
-                                                     file_model_spacer=0, title_parts_ctrl=None, title_parts2_ctrl=None, file_histories_key="multi_split_pmx", \
+                                                     file_model_spacer=0, title_parts_ctrl=None, title_parts2_ctrl=None, file_histories_key="multi_join_pmx", \
                                                      is_change_output=True, is_aster=False, is_save=False, set_no=1)
         self.model_file_ctrl.file_ctrl.Bind(wx.EVT_FILEPICKER_CHANGED, self.on_change_file)
         self.header_sizer.Add(self.model_file_ctrl.sizer, 1, wx.EXPAND, 0)
@@ -64,12 +63,12 @@ class MultiSplitPanel(BasePanel):
         self.setting_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
         # ボーン名指定
-        self.bone_target_txt_ctrl = wx.TextCtrl(self, wx.ID_ANY, "", wx.DefaultPosition, (450, 60), wx.HSCROLL | wx.VSCROLL | wx.TE_MULTILINE | wx.TE_READONLY)
+        self.bone_target_txt_ctrl = wx.TextCtrl(self, wx.ID_ANY, "", wx.DefaultPosition, (450, 80), wx.HSCROLL | wx.VSCROLL | wx.TE_MULTILINE | wx.TE_READONLY)
         self.bone_target_txt_ctrl.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DLIGHT))
         self.setting_sizer.Add(self.bone_target_txt_ctrl, 1, wx.EXPAND | wx.ALL, 5)
 
         self.bone_target_btn_ctrl = wx.Button(self, wx.ID_ANY, u"ボーン指定", wx.DefaultPosition, wx.DefaultSize, 0)
-        self.bone_target_btn_ctrl.SetToolTip(u"モーションに登録されているボーンから、分割したいボーンを指定できます")
+        self.bone_target_btn_ctrl.SetToolTip(u"モーションに登録されているボーンから、統合したいボーンを指定できます")
         self.bone_target_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_click_bone_target)
         self.setting_sizer.Add(self.bone_target_btn_ctrl, 0, wx.ALIGN_BOTTOM | wx.ALL, 5)
 
@@ -81,11 +80,10 @@ class MultiSplitPanel(BasePanel):
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
         # 実行ボタン
-        self.multi_split_btn_ctrl = wx.Button(self, wx.ID_ANY, u"多段分割", wx.DefaultPosition, wx.Size(200, 50), 0)
-        self.multi_split_btn_ctrl.SetToolTip(u"キーフレを多段用に分割したモーションを生成します")
-        self.multi_split_btn_ctrl.Bind(wx.EVT_LEFT_DOWN, self.on_convert_multi_split)
-        self.multi_split_btn_ctrl.Bind(wx.EVT_LEFT_DCLICK, self.on_doubleclick)
-        btn_sizer.Add(self.multi_split_btn_ctrl, 0, wx.ALL, 5)
+        self.multi_join_btn_ctrl = wx.Button(self, wx.ID_ANY, u"多段統合", wx.DefaultPosition, wx.Size(200, 50), 0)
+        self.multi_join_btn_ctrl.SetToolTip(u"キーフレを多段用に統合したモーションを生成します")
+        self.multi_join_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_convert_multi_join)
+        btn_sizer.Add(self.multi_join_btn_ctrl, 0, wx.ALL, 5)
 
         self.sizer.Add(btn_sizer, 0, wx.ALIGN_CENTER | wx.SHAPED, 5)
 
@@ -108,31 +106,9 @@ class MultiSplitPanel(BasePanel):
         self.bone_dialog = TargetBoneDialog(self.frame, self)
 
         # フレームに変換完了処理バインド
-        self.frame.Bind(EVT_SMOOTH_THREAD, self.on_convert_multi_split_result)
+        self.frame.Bind(EVT_SMOOTH_THREAD, self.on_convert_multi_join_result)
     
     def on_click_bone_target(self, event: wx.Event):
-        self.disable()
-
-        # VMD読み込み
-        sys.stdout = self.console_ctrl
-        self.vmd_file_ctrl.load()
-        # PMX読み込み
-        self.model_file_ctrl.load()
-
-        if (self.vmd_file_ctrl.data and self.model_file_ctrl.data and \
-                (self.vmd_file_ctrl.data.digest != self.bone_dialog.vmd_digest or self.model_file_ctrl.data.digest != self.bone_dialog.pmx_digest)):
-
-            # データが揃ってたら押下可能
-            self.bone_target_btn_ctrl.Enable()
-            # リストクリア
-            self.bone_target_txt_ctrl.SetValue("")
-            # リスト再生成
-            self.bone_dialog.initialize()
-        else:
-            logger.error("対象モーションVMD/VPDもしくは適用モデルPMXが未指定です。", decoration=MLogger.DECORATION_BOX)
-
-        self.enable()
-
         if self.bone_dialog.ShowModal() == wx.ID_CANCEL:
             return     # the user changed their mind
 
@@ -153,15 +129,35 @@ class MultiSplitPanel(BasePanel):
         self.set_output_vmd_path(event)
     
     def set_output_vmd_path(self, event: wx.Event, is_force=False):
-        output_multi_split_vmd_path = MFileUtils.get_output_multi_split_vmd_path(
+        output_multi_join_vmd_path = MFileUtils.get_output_multi_join_vmd_path(
             self.vmd_file_ctrl.file_ctrl.GetPath(),
             self.model_file_ctrl.file_ctrl.GetPath(),
             self.output_vmd_file_ctrl.file_ctrl.GetPath(), is_force)
 
-        self.output_vmd_file_ctrl.file_ctrl.SetPath(output_multi_split_vmd_path)
+        self.output_vmd_file_ctrl.file_ctrl.SetPath(output_multi_join_vmd_path)
 
-        if len(output_multi_split_vmd_path) >= 255 and os.name == "nt":
-            logger.error("生成予定のファイルパスがWindowsの制限を超えています。\n生成予定パス: {0}".format(output_multi_split_vmd_path), decoration=MLogger.DECORATION_BOX)
+        if len(output_multi_join_vmd_path) >= 255 and os.name == "nt":
+            logger.error("生成予定のファイルパスがWindowsの制限を超えています。\n生成予定パス: {0}".format(output_multi_join_vmd_path), decoration=MLogger.DECORATION_BOX)
+
+        self.disable()
+
+        # VMD読み込み
+        sys.stdout = self.console_ctrl
+        self.vmd_file_ctrl.load()
+        # PMX読み込み
+        self.model_file_ctrl.load()
+
+        if (self.vmd_file_ctrl.data and self.model_file_ctrl.data and \
+                (self.vmd_file_ctrl.data.digest != self.bone_dialog.vmd_digest or self.model_file_ctrl.data.digest != self.bone_dialog.pmx_digest)):
+
+            # データが揃ってたら押下可能
+            self.bone_target_btn_ctrl.Enable()
+            # リストクリア
+            self.bone_target_txt_ctrl.SetValue("")
+            # リスト再生成
+            self.bone_dialog.initialize()
+
+        self.enable()
 
     # フォーム無効化
     def disable(self):
@@ -169,7 +165,7 @@ class MultiSplitPanel(BasePanel):
         self.model_file_ctrl.disable()
         self.output_vmd_file_ctrl.disable()
         self.bone_target_btn_ctrl.Disable()
-        self.multi_split_btn_ctrl.Disable()
+        self.multi_join_btn_ctrl.Disable()
 
     # フォーム無効化
     def enable(self):
@@ -177,29 +173,20 @@ class MultiSplitPanel(BasePanel):
         self.model_file_ctrl.enable()
         self.output_vmd_file_ctrl.enable()
         self.bone_target_btn_ctrl.Enable()
-        self.multi_split_btn_ctrl.Enable()
+        self.multi_join_btn_ctrl.Enable()
 
-    def on_doubleclick(self, event: wx.Event):
-        self.timer.Stop()
-        logger.warning("ダブルクリックされました。", decoration=MLogger.DECORATION_BOX)
-        event.Skip(False)
-        return False
-    
-    def on_convert_multi_split(self, event: wx.Event):
-        self.timer = wx.Timer(self, TIMER_ID)
-        self.timer.Start(200)
-        self.Bind(wx.EVT_TIMER, self.on_convert, id=TIMER_ID)
-
-    # 多段分割変換
-    def on_convert(self, event: wx.Event):
+    # 多段統合変換
+    def on_convert_multi_join(self, event: wx.Event):
         # フォーム無効化
         self.disable()
         # タブ固定
         self.fix_tab()
         # コンソールクリア
         self.console_ctrl.Clear()
-        # 出力先を多段分割パネルのコンソールに変更
+        # 出力先を多段統合パネルのコンソールに変更
         sys.stdout = self.console_ctrl
+
+        wx.GetApp().Yield()
 
         self.vmd_file_ctrl.save()
         self.model_file_ctrl.save()
@@ -213,12 +200,10 @@ class MultiSplitPanel(BasePanel):
         result = self.model_file_ctrl.is_valid() and result
 
         if len(self.bone_target_txt_ctrl.GetValue()) == 0:
-            logger.error("分割対象ボーンが指定されていません。", decoration=MLogger.DECORATION_BOX)
+            logger.error("統合対象ボーンが指定されていません。", decoration=MLogger.DECORATION_BOX)
             result = False
 
         if not result:
-            self.timer.Stop()
-
             # 終了音
             self.frame.sound_finish()
             # タブ移動可
@@ -228,55 +213,18 @@ class MultiSplitPanel(BasePanel):
 
             return result
 
-        # 多段分割変換開始
-        if self.multi_split_btn_ctrl.GetLabel() == "多段分割停止" and self.convert_multi_split_worker:
-            # フォーム無効化
-            self.disable()
-            # 停止状態でボタン押下時、停止
-            self.convert_multi_split_worker.stop()
-
-            # タブ移動可
-            self.frame.release_tab()
-            # フォーム有効化
-            self.frame.enable()
-            # ワーカー終了
-            self.convert_multi_split_worker = None
-            # プログレス非表示
-            self.gauge_ctrl.SetValue(0)
-
-            self.timer.Stop()
-
-            logger.warning("多段分割を中断します。", decoration=MLogger.DECORATION_BOX)
-            self.multi_split_btn_ctrl.SetLabel("多段分割")
-            
-            event.Skip(False)
-        elif not self.convert_multi_split_worker:
-            # フォーム無効化
-            self.disable()
-            # タブ固定
-            self.fix_tab()
-            # コンソールクリア
-            self.console_ctrl.Clear()
-            # ラベル変更
-            self.multi_split_btn_ctrl.SetLabel("多段分割停止")
-            self.multi_split_btn_ctrl.Enable()
-
-            self.timer.Stop()
-
-            self.convert_multi_split_worker = MultiSplitWorkerThread(self.frame, MultiSplitThreadEvent, self.frame.is_saving)
-            self.convert_multi_split_worker.start()
-            
-            event.Skip()
-        else:
-            self.timer.Stop()
-            
+        # 多段統合変換開始
+        if self.convert_multi_join_worker:
             logger.error("まだ処理が実行中です。終了してから再度実行してください。", decoration=MLogger.DECORATION_BOX)
-            event.Skip(False)
+        else:
+            # 別スレッドで実行
+            self.convert_multi_join_worker = MultiJoinWorkerThread(self.frame, MultiJoinThreadEvent, self.frame.is_saving)
+            self.convert_multi_join_worker.start()
 
         return result
 
-    # 多段分割変換完了処理
-    def on_convert_multi_split_result(self, event: wx.Event):
+    # 多段統合変換完了処理
+    def on_convert_multi_join_result(self, event: wx.Event):
         self.elapsed_time = event.elapsed_time
         logger.info("\n処理時間: %s", self.show_worked_time())
 
@@ -288,12 +236,9 @@ class MultiSplitPanel(BasePanel):
         # フォーム有効化
         self.enable()
         # ワーカー終了
-        self.convert_multi_split_worker = None
+        self.convert_multi_join_worker = None
         # プログレス非表示
         self.gauge_ctrl.SetValue(0)
-        # ラベル変更
-        self.multi_split_btn_ctrl.SetLabel("多段分割")
-        self.multi_split_btn_ctrl.Enable()
 
     def show_worked_time(self):
         # 経過秒数を時分秒に変換
@@ -310,7 +255,7 @@ class MultiSplitPanel(BasePanel):
 class TargetBoneDialog(wx.Dialog):
 
     def __init__(self, frame: wx.Frame, panel: wx.Panel):
-        super().__init__(frame, id=wx.ID_ANY, title="分割ボーン指定", pos=(-1, -1), size=(700, 450), style=wx.DEFAULT_DIALOG_STYLE, name="TargetBoneDialog")
+        super().__init__(frame, id=wx.ID_ANY, title="統合ボーン指定", pos=(-1, -1), size=(700, 450), style=wx.DEFAULT_DIALOG_STYLE, name="TargetBoneDialog")
 
         self.frame = frame
         self.panel = panel
@@ -329,7 +274,7 @@ class TargetBoneDialog(wx.Dialog):
         self.sizer = wx.BoxSizer(wx.VERTICAL)
 
         # 説明文
-        self.description_txt = wx.StaticText(self, wx.ID_ANY, u"多段分割したいボーン名を選択してください。", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.description_txt = wx.StaticText(self, wx.ID_ANY, u"多段統合したいボーン名を選択してください。", wx.DefaultPosition, wx.DefaultSize, 0)
         self.sizer.Add(self.description_txt, 0, wx.ALL, 5)
 
         # ボタン
@@ -342,19 +287,19 @@ class TargetBoneDialog(wx.Dialog):
 
         # インポートボタン
         self.import_btn_ctrl = wx.Button(self, wx.ID_ANY, u"インポート ...", wx.DefaultPosition, wx.DefaultSize, 0)
-        self.import_btn_ctrl.SetToolTip(u"ボーン分割データをCSVファイルから読み込みます。\nファイル選択ダイアログが開きます。")
+        self.import_btn_ctrl.SetToolTip(u"ボーン統合データをCSVファイルから読み込みます。\nファイル選択ダイアログが開きます。")
         self.import_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_import)
         self.btn_sizer.Add(self.import_btn_ctrl, 0, wx.ALL, 5)
 
         # エクスポートボタン
         self.export_btn_ctrl = wx.Button(self, wx.ID_ANY, u"エクスポート ...", wx.DefaultPosition, wx.DefaultSize, 0)
-        self.export_btn_ctrl.SetToolTip(u"ボーン分割データをCSVファイルに出力します。\n調整対象VMDと同じフォルダに出力します。")
+        self.export_btn_ctrl.SetToolTip(u"ボーン統合データをCSVファイルに出力します。\n調整対象VMDと同じフォルダに出力します。")
         self.export_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_export)
         self.btn_sizer.Add(self.export_btn_ctrl, 0, wx.ALL, 5)
 
         # 行追加ボタン
         self.add_line_btn_ctrl = wx.Button(self, wx.ID_ANY, u"行追加", wx.DefaultPosition, wx.DefaultSize, 0)
-        self.add_line_btn_ctrl.SetToolTip(u"ボーン分割の組み合わせ行を追加します。\n上限はありません。")
+        self.add_line_btn_ctrl.SetToolTip(u"ボーン統合の組み合わせ行を追加します。\n上限はありません。")
         self.add_line_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_add_line)
         self.btn_sizer.Add(self.add_line_btn_ctrl, 0, wx.ALL, 5)
 
@@ -439,7 +384,7 @@ class TargetBoneDialog(wx.Dialog):
             self.add_line()
 
     def on_import(self, event: wx.Event):
-        input_bone_path = MFileUtils.get_output_split_bone_path(
+        input_bone_path = MFileUtils.get_output_join_bone_path(
             self.panel.vmd_file_ctrl.file_ctrl.GetPath(),
             self.panel.model_file_ctrl.file_ctrl.GetPath()
         )
@@ -520,7 +465,7 @@ class TargetBoneDialog(wx.Dialog):
             rep_my_choice_values.append(m[5])
             rep_mz_choice_values.append(m[6])
 
-        output_bone_path = MFileUtils.get_output_split_bone_path(
+        output_bone_path = MFileUtils.get_output_join_bone_path(
             self.panel.vmd_file_ctrl.file_ctrl.GetPath(),
             self.panel.model_file_ctrl.file_ctrl.GetPath()
         )
@@ -540,12 +485,12 @@ class TargetBoneDialog(wx.Dialog):
             logger.info("出力成功: %s" % output_bone_path)
 
             dialog = wx.MessageDialog(self.frame, "多段ボーンデータのエクスポートに成功しました \n'%s'" % (output_bone_path), style=wx.OK)
-            dialog.ShowModal()
+            dialog.Show()
             dialog.Destroy()
 
         except Exception:
             dialog = wx.MessageDialog(self.frame, "多段ボーンデータのエクスポートに失敗しました \n'%s'\n\n%s." % (output_bone_path, traceback.format_exc()), style=wx.OK)
-            dialog.ShowModal()
+            dialog.Show()
             dialog.Destroy()
 
     def on_add_line(self, event: wx.Event):

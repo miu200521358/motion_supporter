@@ -14,6 +14,7 @@ from utils import MFormUtils, MFileUtils
 from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__)
+TIMER_ID = wx.NewId()
 
 # イベント定義
 (NoiseThreadEvent, EVT_SMOOTH_THREAD) = wx.lib.newevent.NewEvent()
@@ -80,7 +81,8 @@ class NoisePanel(BasePanel):
         # 実行ボタン
         self.noise_btn_ctrl = wx.Button(self, wx.ID_ANY, u"ゆらぎ複製", wx.DefaultPosition, wx.Size(200, 50), 0)
         self.noise_btn_ctrl.SetToolTip(u"ゆらぎを付与したモーションを複製します")
-        self.noise_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_convert_noise)
+        self.noise_btn_ctrl.Bind(wx.EVT_LEFT_DOWN, self.on_convert_noise)
+        self.noise_btn_ctrl.Bind(wx.EVT_LEFT_DCLICK, self.on_doubleclick)
         btn_sizer.Add(self.noise_btn_ctrl, 0, wx.ALL, 5)
 
         self.sizer.Add(btn_sizer, 0, wx.ALIGN_CENTER | wx.SHAPED, 5)
@@ -134,8 +136,20 @@ class NoisePanel(BasePanel):
         self.output_noise_vmd_file_ctrl.enable()
         self.noise_btn_ctrl.Enable()
 
+    def on_doubleclick(self, event: wx.Event):
+        self.timer.Stop()
+        logger.warning("ダブルクリックされました。", decoration=MLogger.DECORATION_BOX)
+        event.Skip(False)
+        return False
+    
     # 多段分割変換
     def on_convert_noise(self, event: wx.Event):
+        self.timer = wx.Timer(self, TIMER_ID)
+        self.timer.Start(200)
+        self.Bind(wx.EVT_TIMER, self.on_convert, id=TIMER_ID)
+
+    # 多段分割変換
+    def on_convert(self, event: wx.Event):
         # フォーム無効化
         self.disable()
         # タブ固定
@@ -144,8 +158,6 @@ class NoisePanel(BasePanel):
         self.console_ctrl.Clear()
         # 出力先を多段分割パネルのコンソールに変更
         sys.stdout = self.console_ctrl
-
-        wx.GetApp().Yield()
 
         self.noise_vmd_file_ctrl.save()
 
@@ -157,6 +169,7 @@ class NoisePanel(BasePanel):
         result = self.noise_vmd_file_ctrl.is_valid() and result
 
         if not result:
+            self.timer.Stop()
             # 終了音
             self.frame.sound_finish()
             # タブ移動可
@@ -166,13 +179,50 @@ class NoisePanel(BasePanel):
 
             return result
 
-        # 多段分割変換開始
-        if self.convert_noise_worker:
-            logger.error("まだ処理が実行中です。終了してから再度実行してください。", decoration=MLogger.DECORATION_BOX)
-        else:
-            # 別スレッドで実行
+        # ゆらぎ複製変換開始
+        if self.noise_btn_ctrl.GetLabel() == "ゆらぎ複製停止" and self.convert_noise_worker:
+            # フォーム無効化
+            self.disable()
+            # 停止状態でボタン押下時、停止
+            self.convert_noise_worker.stop()
+
+            # タブ移動可
+            self.frame.release_tab()
+            # フォーム有効化
+            self.frame.enable()
+            # ワーカー終了
+            self.convert_noise_worker = None
+            # プログレス非表示
+            self.gauge_ctrl.SetValue(0)
+
+            self.timer.Stop()
+
+            logger.warning("ゆらぎ複製を中断します。", decoration=MLogger.DECORATION_BOX)
+            self.noise_btn_ctrl.SetLabel("ゆらぎ複製")
+            
+            event.Skip(False)
+        elif not self.convert_noise_worker:
+            # フォーム無効化
+            self.disable()
+            # タブ固定
+            self.fix_tab()
+            # コンソールクリア
+            self.console_ctrl.Clear()
+            # ラベル変更
+            self.noise_btn_ctrl.SetLabel("ゆらぎ複製停止")
+            self.noise_btn_ctrl.Enable()
+
+            self.timer.Stop()
+
             self.convert_noise_worker = NoiseWorkerThread(self.frame, NoiseThreadEvent, self.frame.is_saving)
             self.convert_noise_worker.start()
+            
+            event.Skip()
+        else:
+            self.timer.Stop()
+            
+            logger.error("まだ処理が実行中です。終了してから再度実行してください。", decoration=MLogger.DECORATION_BOX)
+            event.Skip(False)
 
         return result
 

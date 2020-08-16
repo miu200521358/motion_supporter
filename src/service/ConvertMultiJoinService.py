@@ -6,7 +6,7 @@ import traceback
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor
 
-from module.MOptions import MMultiSplitOptions, MOptionsDataSet
+from module.MOptions import MMultiJoinOptions, MOptionsDataSet
 from mmd.PmxData import PmxModel # noqa
 from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
 from mmd.VmdWriter import VmdWriter
@@ -18,8 +18,8 @@ from utils.MException import SizingException, MKilledException
 logger = MLogger(__name__, level=1)
 
 
-class ConvertMultiSplitService():
-    def __init__(self, options: MMultiSplitOptions):
+class ConvertMultiJoinService():
+    def __init__(self, options: MMultiJoinOptions):
         self.options = options
 
     def execute(self):
@@ -45,12 +45,12 @@ class ConvertMultiSplitService():
 
             futures = []
 
-            with ThreadPoolExecutor(thread_name_prefix="split", max_workers=min(5, self.options.max_workers)) as executor:
+            with ThreadPoolExecutor(thread_name_prefix="join", max_workers=min(5, self.options.max_workers)) as executor:
                 for (bone_name, rrxbn, rrybn, rrzbn, rmxbn, rmybn, rmzbn) in self.options.target_bones:
                     if bone_name not in model.bones or bone_name not in motion.bones:
                         continue
 
-                    futures.append(executor.submit(self.convert_multi_split, bone_name, rrxbn, rrybn, rrzbn, rmxbn, rmybn, rmzbn))
+                    futures.append(executor.submit(self.convert_multi_join, bone_name, rrxbn, rrybn, rrzbn, rmxbn, rmybn, rmzbn))
 
             concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
@@ -64,8 +64,6 @@ class ConvertMultiSplitService():
             logger.info("出力終了: %s", os.path.basename(self.options.output_path), decoration=MLogger.DECORATION_BOX, title="成功")
 
             return True
-        except MKilledException:
-            return False
         except SizingException as se:
             logger.error("多段分割処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
         except Exception:
@@ -74,8 +72,8 @@ class ConvertMultiSplitService():
             logging.shutdown()
 
     # 多段分割処理実行
-    def convert_multi_split(self, bone_name: str, rrxbn: str, rrybn: str, rrzbn: str, rmxbn: str, rmybn: str, rmzbn: str):
-        logger.info("多段分割【%s】", bone_name, decoration=MLogger.DECORATION_LINE)
+    def convert_multi_join(self, bone_name: str, rrxbn: str, rrybn: str, rrzbn: str, rmxbn: str, rmybn: str, rmzbn: str):
+        logger.info("多段分割", decoration=MLogger.DECORATION_LINE)
 
         motion = self.options.motion
         model = self.options.model
@@ -85,7 +83,7 @@ class ConvertMultiSplitService():
         prev_sep_fno = 0
 
         # 事前に全打ち
-        motion.regist_full_bf(0, [bone_name], offset=2)
+        motion.regist_full_bf(0, [bone_name], offset=0)
         fnos = motion.get_bone_fnos(bone_name)
 
         logger.info("-- 準備完了【%s】", bone_name)
@@ -97,52 +95,40 @@ class ConvertMultiSplitService():
                 # 回転を分ける
                 x_qq, y_qq, z_qq, _ = MServiceUtils.separate_local_qq(fno, bone_name, bf.rotation, local_x_axis)
 
-                if len(rrxbn) > 0:
-                    rx_bf = VmdBoneFrame(fno)
-                    rx_bf.set_name(rrxbn)
-                    rx_bf.rotation *= x_qq
-                    motion.copy_interpolation(bf, rx_bf, MBezierUtils.BZ_TYPE_R)
-                    motion.regist_bf(rx_bf, rx_bf.name, fno, copy_interpolation=True)
+                rx_bf = VmdBoneFrame(fno)
+                rx_bf.set_name(rrxbn)
+                rx_bf.rotation *= x_qq
+                motion.regist_bf(rx_bf, rx_bf.name, fno)
 
-                if len(rrybn) > 0:
-                    ry_bf = VmdBoneFrame(fno)
-                    ry_bf.set_name(rrybn)
-                    ry_bf.rotation *= y_qq
-                    motion.copy_interpolation(bf, ry_bf, MBezierUtils.BZ_TYPE_R)
-                    motion.regist_bf(ry_bf, ry_bf.name, fno, copy_interpolation=True)
+                ry_bf = VmdBoneFrame(fno)
+                ry_bf.set_name(rrybn)
+                ry_bf.rotation *= y_qq
+                motion.regist_bf(ry_bf, ry_bf.name, fno)
 
-                if len(rrzbn) > 0:
-                    rz_bf = VmdBoneFrame(fno)
-                    rz_bf.set_name(rrzbn)
-                    rz_bf.rotation *= z_qq
-                    motion.copy_interpolation(bf, rz_bf, MBezierUtils.BZ_TYPE_R)
-                    motion.regist_bf(rz_bf, rz_bf.name, fno, copy_interpolation=True)
+                rz_bf = VmdBoneFrame(fno)
+                rz_bf.set_name(rrzbn)
+                rz_bf.rotation *= z_qq
+                motion.regist_bf(rz_bf, rz_bf.name, fno)
             
             if model.bones[bone_name].getTranslatable():
                 # 移動を分ける
-                if len(rmxbn) > 0:
-                    mx_bf = VmdBoneFrame(fno)
-                    mx_bf.set_name(rmxbn)
-                    mx_bf.position.setX(mx_bf.position.x() + bf.position.x())
-                    motion.copy_interpolation(bf, mx_bf, MBezierUtils.BZ_TYPE_MX)
-                    motion.regist_bf(mx_bf, mx_bf.name, fno, copy_interpolation=True)
+                mx_bf = VmdBoneFrame(fno)
+                mx_bf.set_name(rmxbn)
+                mx_bf.position.setX(mx_bf.position.x() + bf.position.x())
+                motion.regist_bf(mx_bf, mx_bf.name, fno)
 
-                if len(rmybn) > 0:
-                    my_bf = VmdBoneFrame(fno)
-                    my_bf.set_name(rmybn)
-                    my_bf.position.setY(my_bf.position.y() + bf.position.y())
-                    motion.copy_interpolation(bf, my_bf, MBezierUtils.BZ_TYPE_MY)
-                    motion.regist_bf(my_bf, my_bf.name, fno, copy_interpolation=True)
+                my_bf = VmdBoneFrame(fno)
+                my_bf.set_name(rmybn)
+                my_bf.position.setY(my_bf.position.y() + bf.position.y())
+                motion.regist_bf(my_bf, my_bf.name, fno)
 
-                if len(rmzbn) > 0:
-                    mz_bf = VmdBoneFrame(fno)
-                    mz_bf.set_name(rmzbn)
-                    mz_bf.position.setZ(mz_bf.position.z() + bf.position.z())
-                    motion.copy_interpolation(bf, mz_bf, MBezierUtils.BZ_TYPE_MZ)
-                    motion.regist_bf(mz_bf, mz_bf.name, fno, copy_interpolation=True)
+                mz_bf = VmdBoneFrame(fno)
+                mz_bf.set_name(rmzbn)
+                mz_bf.position.setZ(mz_bf.position.z() + bf.position.z())
+                motion.regist_bf(mz_bf, mz_bf.name, fno)
 
             if fno // 1000 > prev_sep_fno and fnos[-1] > 0:
-                logger.info("-- %sフレーム目:終了(%s％)【多段分割 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
+                logger.info("-- %sフレーム目:終了(%s％)【%s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
                 prev_sep_fno = fno // 1000
 
         # 元のボーン削除
@@ -150,22 +136,16 @@ class ConvertMultiSplitService():
 
         # 不要キー削除
         futures = []
-        with ThreadPoolExecutor(thread_name_prefix="remove", max_workers=min(6, self.options.max_workers)) as executor:
-            if model.bones[bone_name].getRotatable():
-                if len(rrxbn) > 0:
-                    futures.append(executor.submit(self.remove_unnecessary_bf, rrxbn))
-                if len(rrybn) > 0:
-                    futures.append(executor.submit(self.remove_unnecessary_bf, rrybn))
-                if len(rrzbn) > 0:
-                    futures.append(executor.submit(self.remove_unnecessary_bf, rrzbn))
+        with ThreadPoolExecutor(thread_name_prefix="remove", max_workers=min(5, self.options.max_workers)) as executor:
+            if model.bones[rrxbn].getRotatable():
+                futures.append(executor.submit(self.remove_unnecessary_bf, rrxbn))
+                futures.append(executor.submit(self.remove_unnecessary_bf, rrybn))
+                futures.append(executor.submit(self.remove_unnecessary_bf, rrzbn))
 
             if model.bones[bone_name].getTranslatable():
-                if len(rmxbn) > 0:
-                    futures.append(executor.submit(self.remove_unnecessary_bf, rmxbn))
-                if len(rmybn) > 0:
-                    futures.append(executor.submit(self.remove_unnecessary_bf, rmybn))
-                if len(rmzbn) > 0:
-                    futures.append(executor.submit(self.remove_unnecessary_bf, rmzbn))
+                futures.append(executor.submit(self.remove_unnecessary_bf, rmxbn))
+                futures.append(executor.submit(self.remove_unnecessary_bf, rmybn))
+                futures.append(executor.submit(self.remove_unnecessary_bf, rmzbn))
 
         concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
@@ -176,7 +156,7 @@ class ConvertMultiSplitService():
         return True
 
     # # 多段分割処理実行
-    # def convert_multi_split(self, bone_name: str, rrxbn: str, rrybn: str, rrzbn: str, rmxbn: str, rmybn: str, rmzbn: str):
+    # def convert_multi_join(self, bone_name: str, rrxbn: str, rrybn: str, rrzbn: str, rmxbn: str, rmybn: str, rmzbn: str):
     #     logger.info("多段分割", decoration=MLogger.DECORATION_LINE)
 
     #     motion = self.options.motion
@@ -188,7 +168,7 @@ class ConvertMultiSplitService():
     #     prev_sep_fno = 0
 
     #     # 事前に細分化
-    #     self.prepare_split_stance(motion, bone_name)
+    #     self.prepare_join_stance(motion, bone_name)
     #     logger.info("-- 準備完了【%s】", bone_name)
 
     #     for fno in fnos:
@@ -246,7 +226,7 @@ class ConvertMultiSplitService():
     #     return True
 
     # スタンス用細分化
-    def prepare_split_stance(self, motion: VmdMotion, target_bone_name: str):
+    def prepare_join_stance(self, motion: VmdMotion, target_bone_name: str):
         fnos = motion.get_bone_fnos(target_bone_name)
 
         for fidx, fno in enumerate(fnos):
@@ -270,7 +250,7 @@ class ConvertMultiSplitService():
     def remove_unnecessary_bf(self, bone_name: str):
         try:
             self.options.motion.remove_unnecessary_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
-                                                      self.options.model.bones[bone_name].getTranslatable(), offset=5, rot_diff_limit=10)
+                                                      self.options.model.bones[bone_name].getTranslatable())
 
             return True
         except MKilledException as ke:

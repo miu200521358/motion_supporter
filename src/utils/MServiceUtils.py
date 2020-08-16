@@ -173,6 +173,22 @@ def separate_local_qq(fno: int, bone_name: str, qq: MQuaternion, global_x_axis: 
 
     y_qq = MQuaternion.rotationTo(global_x_axis, mat_y3_vec)
 
+    # Xを再度求める -------------
+
+    mat_x4 = MMatrix4x4()
+    mat_x4.setToIdentity()
+    mat_x4.rotate(qq)
+
+    mat_x5 = MMatrix4x4()
+    mat_x5.setToIdentity()
+    mat_x5.rotate(y_qq)
+
+    mat_x6 = MMatrix4x4()
+    mat_x6.setToIdentity()
+    mat_x6.rotate(z_qq)
+
+    x_qq = (mat_x5.inverted() * mat_x4 * mat_x6.inverted()).toQuaternion()
+
     return x_qq, y_qq, z_qq, yz_qq
 
 

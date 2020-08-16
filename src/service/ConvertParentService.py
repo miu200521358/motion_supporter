@@ -46,6 +46,8 @@ class ConvertParentService():
             logger.info("出力終了: %s", os.path.basename(self.options.output_path), decoration=MLogger.DECORATION_BOX, title="成功")
 
             return result
+        except MKilledException:
+            return False
         except SizingException as se:
             logger.error("全親移植処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
         except Exception:

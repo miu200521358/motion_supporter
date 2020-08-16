@@ -36,6 +36,22 @@ MZ_y1_idxs = [6, 21, 51, 36]
 MZ_x2_idxs = [10, 25, 55, 40]
 MZ_y2_idxs = [14, 29, 59, 44]
 
+BZ_TYPE_MX = "MX"
+BZ_TYPE_MY = "MY"
+BZ_TYPE_MZ = "MZ"
+BZ_TYPE_R = "R"
+
+
+def from_bz_type(bz_type: str):
+    if bz_type == BZ_TYPE_MX:
+        return MX_x1_idxs, MX_y1_idxs, MX_x2_idxs, MX_y2_idxs
+    elif bz_type == BZ_TYPE_MY:
+        return MY_x1_idxs, MY_y1_idxs, MY_x2_idxs, MY_y2_idxs
+    elif bz_type == BZ_TYPE_MZ:
+        return MZ_x1_idxs, MZ_y1_idxs, MZ_x2_idxs, MZ_y2_idxs
+    else:
+        return R_x1_idxs, R_y1_idxs, R_x2_idxs, R_y2_idxs
+
 
 # 指定したすべての値をカトマル曲線として計算する
 def calc_value_from_catmullrom(bone_name: str, fnos: int, values: list):
@@ -186,6 +202,9 @@ def join_value_2_bezier(fno: int, bone_name: str, values: list, offset=0, diff_l
             # bz_y = [full_curve.nodes[0][0]] + list(bz_y) + [full_curve.nodes[0][-1]]
 
             joined_curve = bezier.Curve(np.asfortranarray([bz_x, bz_y]), degree=(len(bz_x) - 1))
+        else:
+            # それ以外（ないはず）は線形補間
+            return LINEAR_MMD_INTERPOLATION
 
         logger.test("joined_curve: %s", joined_curve.nodes)
 

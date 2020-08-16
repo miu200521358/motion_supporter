@@ -7,6 +7,7 @@ import wx
 from form.panel.ParentPanel import ParentPanel
 from form.panel.NoisePanel import NoisePanel
 from form.panel.MultiSplitPanel import MultiSplitPanel
+from form.panel.MultiJoinPanel import MultiJoinPanel
 from form.panel.IKtoFKPanel import IKtoFKPanel
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from utils import MFormUtils, MFileUtils # noqa
@@ -78,9 +79,13 @@ class MainFrame(wx.Frame):
         self.noise_panel_ctrl = NoisePanel(self, self.note_ctrl, 9)
         self.note_ctrl.AddPage(self.noise_panel_ctrl, u"ゆらぎ複製", False)
         
-        # # 多段分割タブ
-        # self.multi_split_panel_ctrl = MultiSplitPanel(self, self.note_ctrl, 9)
-        # self.note_ctrl.AddPage(self.multi_split_panel_ctrl, u"多段分割", False)
+        # 多段分割タブ
+        self.multi_split_panel_ctrl = MultiSplitPanel(self, self.note_ctrl, 9)
+        self.note_ctrl.AddPage(self.multi_split_panel_ctrl, u"多段分割", False)
+        
+        # # 多段統合タブ
+        # self.multi_join_panel_ctrl = MultiJoinPanel(self, self.note_ctrl, 9)
+        # self.note_ctrl.AddPage(self.multi_join_panel_ctrl, u"多段統合", False)
         
         # # IKtoFKタブ
         # self.ik2fk_panel_ctrl = IKtoFKPanel(self, self.note_ctrl, 9)

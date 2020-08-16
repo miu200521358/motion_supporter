@@ -95,3 +95,18 @@ class MMultiSplitOptions():
         self.max_workers = max_workers
 
 
+class MMultiJoinOptions():
+
+    def __init__(self, version_name, logging_level, max_workers, motion, model, target_bones, output_path, monitor, is_file, outout_datetime):
+        self.version_name = version_name
+        self.logging_level = logging_level
+        self.motion = motion
+        self.model = model
+        self.target_bones = target_bones
+        self.output_path = output_path
+        self.monitor = monitor
+        self.is_file = is_file
+        self.outout_datetime = outout_datetime
+        self.max_workers = max_workers
+
+

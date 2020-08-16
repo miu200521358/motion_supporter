@@ -14,6 +14,7 @@ from utils import MFormUtils, MFileUtils
 from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__)
+TIMER_ID = wx.NewId()
 
 # イベント定義
 (ParentThreadEvent, EVT_SMOOTH_THREAD) = wx.lib.newevent.NewEvent()
@@ -65,7 +66,8 @@ class ParentPanel(BasePanel):
         # 多段分割変換実行ボタン
         self.parent_btn_ctrl = wx.Button(self, wx.ID_ANY, u"全親移植", wx.DefaultPosition, wx.Size(200, 50), 0)
         self.parent_btn_ctrl.SetToolTip(u"全親を移植させたモーションを再生成します。")
-        self.parent_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_convert_parent)
+        self.parent_btn_ctrl.Bind(wx.EVT_LEFT_DOWN, self.on_convert_parent)
+        self.parent_btn_ctrl.Bind(wx.EVT_LEFT_DCLICK, self.on_doubleclick)
         btn_sizer.Add(self.parent_btn_ctrl, 0, wx.ALL, 5)
 
         self.sizer.Add(btn_sizer, 0, wx.ALIGN_CENTER | wx.SHAPED, 5)
@@ -121,8 +123,20 @@ class ParentPanel(BasePanel):
         self.output_parent_vmd_file_ctrl.enable()
         self.parent_btn_ctrl.Enable()
 
+    def on_doubleclick(self, event: wx.Event):
+        self.timer.Stop()
+        logger.warning("ダブルクリックされました。", decoration=MLogger.DECORATION_BOX)
+        event.Skip(False)
+        return False
+    
     # 多段分割変換
     def on_convert_parent(self, event: wx.Event):
+        self.timer = wx.Timer(self, TIMER_ID)
+        self.timer.Start(200)
+        self.Bind(wx.EVT_TIMER, self.on_convert, id=TIMER_ID)
+
+    # 多段分割変換
+    def on_convert(self, event: wx.Event):
         # フォーム無効化
         self.disable()
         # タブ固定
@@ -131,8 +145,6 @@ class ParentPanel(BasePanel):
         self.console_ctrl.Clear()
         # 出力先を多段分割パネルのコンソールに変更
         sys.stdout = self.console_ctrl
-
-        wx.GetApp().Yield()
 
         self.parent_vmd_file_ctrl.save()
         self.parent_model_file_ctrl.save()
@@ -145,6 +157,7 @@ class ParentPanel(BasePanel):
         result = self.parent_vmd_file_ctrl.is_valid() and self.parent_model_file_ctrl.is_valid() and result
 
         if not result:
+            self.timer.Stop()
             # 終了音
             self.frame.sound_finish()
             # タブ移動可
@@ -154,13 +167,50 @@ class ParentPanel(BasePanel):
 
             return result
 
-        # 多段分割変換開始
-        if self.convert_parent_worker:
-            logger.error("まだ処理が実行中です。終了してから再度実行してください。", decoration=MLogger.DECORATION_BOX)
-        else:
-            # 別スレッドで実行
+        # 全親移植変換開始
+        if self.parent_btn_ctrl.GetLabel() == "全親移植停止" and self.convert_parent_worker:
+            # フォーム無効化
+            self.disable()
+            # 停止状態でボタン押下時、停止
+            self.convert_parent_worker.stop()
+
+            # タブ移動可
+            self.frame.release_tab()
+            # フォーム有効化
+            self.frame.enable()
+            # ワーカー終了
+            self.convert_parent_worker = None
+            # プログレス非表示
+            self.gauge_ctrl.SetValue(0)
+
+            self.timer.Stop()
+
+            logger.warning("全親移植を中断します。", decoration=MLogger.DECORATION_BOX)
+            self.parent_btn_ctrl.SetLabel("全親移植")
+            
+            event.Skip(False)
+        elif not self.convert_parent_worker:
+            # フォーム無効化
+            self.disable()
+            # タブ固定
+            self.fix_tab()
+            # コンソールクリア
+            self.console_ctrl.Clear()
+            # ラベル変更
+            self.parent_btn_ctrl.SetLabel("全親移植停止")
+            self.parent_btn_ctrl.Enable()
+
+            self.timer.Stop()
+
             self.convert_parent_worker = ParentWorkerThread(self.frame, ParentThreadEvent, self.frame.is_saving)
             self.convert_parent_worker.start()
+            
+            event.Skip()
+        else:
+            self.timer.Stop()
+            
+            logger.error("まだ処理が実行中です。終了してから再度実行してください。", decoration=MLogger.DECORATION_BOX)
+            event.Skip(False)
 
         return result
 
