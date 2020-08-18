@@ -80,13 +80,18 @@ class ConvertMultiSplitService():
         motion = self.options.motion
         model = self.options.model
 
-        # 事前に全打ち
-        fnos = motion.get_differ_fnos(0, [bone_name], limit_degrees=10, limit_length=0.1)
+        # 事前に変化量全打ち(移動はあるキーだけ計測)
+        fnos = motion.get_differ_fnos(0, [bone_name], limit_degrees=10, limit_length=-1)
+
+        if len(fnos) == 0:
+            return
 
         prev_sep_fno = 0
         for fno in fnos:
+            # 一度そのままキーを登録
+            motion.regist_bf(motion.calc_bf(bone_name, fno), bone_name, fno)
+            # 補間曲線のため、もう一度取得しなおし
             bf = motion.calc_bf(bone_name, fno)
-            motion.regist_bf(bf, bone_name, fno)
 
             if model.bones[bone_name].getRotatable():
                 rx_bf = motion.calc_bf(rrxbn, fno)
@@ -100,7 +105,7 @@ class ConvertMultiSplitService():
                 rz_bf = motion.calc_bf(rrzbn, fno)
                 motion.copy_interpolation(bf, rz_bf, MBezierUtils.BZ_TYPE_R)
                 motion.regist_bf(rz_bf, rz_bf.name, fno, copy_interpolation=True)
-                
+
             if model.bones[bone_name].getTranslatable():
                 mx_bf = motion.calc_bf(rmxbn, fno)
                 motion.copy_interpolation(bf, mx_bf, MBezierUtils.BZ_TYPE_MX)
@@ -113,10 +118,10 @@ class ConvertMultiSplitService():
                 mz_bf = motion.calc_bf(rmzbn, fno)
                 motion.copy_interpolation(bf, mz_bf, MBezierUtils.BZ_TYPE_MZ)
                 motion.regist_bf(mz_bf, mz_bf.name, fno, copy_interpolation=True)
-
-            if fno // 1000 > prev_sep_fno and fnos[-1] > 0:
+                
+            if fno // 500 > prev_sep_fno and fnos[-1] > 0:
                 logger.info("-- %sフレーム目:終了(%s％)【キーフレ追加 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
-                prev_sep_fno = fno // 1000
+                prev_sep_fno = fno // 500
 
         logger.info("-- 準備完了【%s】", bone_name)
 
@@ -163,9 +168,9 @@ class ConvertMultiSplitService():
                     mz_bf.position.setZ(mz_bf.position.z() + bf.position.z())
                     motion.regist_bf(mz_bf, mz_bf.name, fno)
 
-            if fno // 1000 > prev_sep_fno and fnos[-1] > 0:
+            if fno // 200 > prev_sep_fno and fnos[-1] > 0:
                 logger.info("-- %sフレーム目:終了(%s％)【多段分割 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
-                prev_sep_fno = fno // 1000
+                prev_sep_fno = fno // 200
 
         logger.info("-- 分割完了【%s】", bone_name)
 

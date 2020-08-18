@@ -458,12 +458,23 @@ class TargetBoneDialog(wx.Dialog):
                         return
 
                     org_choice_values = bone_lines[0]
-                    rep_rx_choice_values = bone_lines[1]
-                    rep_ry_choice_values = bone_lines[2]
-                    rep_rz_choice_values = bone_lines[3]
-                    rep_mx_choice_values = bone_lines[4]
-                    rep_my_choice_values = bone_lines[5]
-                    rep_mz_choice_values = bone_lines[6]
+                    if len(bone_lines) >= 4:
+                        rep_rx_choice_values = bone_lines[1]
+                        rep_ry_choice_values = bone_lines[2]
+                        rep_rz_choice_values = bone_lines[3]
+                    else:
+                        rep_rx_choice_values = [""]
+                        rep_ry_choice_values = [""]
+                        rep_rz_choice_values = [""]
+                        
+                    if len(bone_lines) >= 7:
+                        rep_mx_choice_values = bone_lines[4]
+                        rep_my_choice_values = bone_lines[5]
+                        rep_mz_choice_values = bone_lines[6]
+                    else:
+                        rep_mx_choice_values = [""]
+                        rep_my_choice_values = [""]
+                        rep_mz_choice_values = [""]
 
                     for (ov, rmxv, rmyv, rmzv, rrxv, rryv, rrzv) in zip(org_choice_values, rep_mx_choice_values, rep_my_choice_values, rep_mz_choice_values, \
                                                                         rep_rx_choice_values, rep_ry_choice_values, rep_rz_choice_values):

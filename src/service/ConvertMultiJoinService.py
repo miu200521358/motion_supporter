@@ -75,10 +75,14 @@ class ConvertMultiJoinService():
         model = self.options.model
 
         # 事前に全打ち
-        fnos = motion.get_differ_fnos(0, [rrxbn, rrybn, rrzbn, rmxbn, rmybn, rmzbn], limit_degrees=5, limit_length=0.1)
+        # fnos = motion.get_differ_fnos(0, [rrxbn, rrybn, rrzbn, rmxbn, rmybn, rmzbn], limit_degrees=5, limit_length=0.1)
+        fnos = motion.get_bone_fnos(bone_name)
+
+        if len(fnos) == 0:
+            return
 
         prev_sep_fno = 0
-        for fno in fnos:
+        for fno in range(fnos[-1] + 1):
             bf = motion.calc_bf(bone_name, fno)
             motion.regist_bf(bf, bone_name, fno)
 

@@ -31,7 +31,7 @@ class MultiJoinPanel(BasePanel):
 
         self.header_sizer = wx.BoxSizer(wx.VERTICAL)
 
-        self.description_txt = wx.StaticText(self, wx.ID_ANY, u"モーションの指定ボーンの移動量と回転量をXYZに統合します。統合するボーンは「ボーン指定」ボタンから定義できます。", \
+        self.description_txt = wx.StaticText(self, wx.ID_ANY, u"モーションの指定ボーンの移動量XYZと回転量XYZを統合します。統合するボーンは「ボーン指定」ボタンから定義できます。", \
                                              wx.DefaultPosition, wx.DefaultSize, 0)
         self.header_sizer.Add(self.description_txt, 0, wx.ALL, 5)
 
