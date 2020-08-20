@@ -41,7 +41,7 @@ class MultiJoinWorkerThread(BaseWorkerThread):
                 self.options = MMultiJoinOptions(\
                     version_name=self.frame.version_name, \
                     logging_level=self.frame.logging_level, \
-                    motion=self.frame.multi_join_panel_ctrl.vmd_file_ctrl.data, \
+                    motion=self.frame.multi_join_panel_ctrl.vmd_file_ctrl.data.copy(), \
                     model=self.frame.multi_join_panel_ctrl.model_file_ctrl.data, \
                     target_bones=self.frame.multi_join_panel_ctrl.bone_dialog.get_bone_list(), \
                     output_path=self.frame.multi_join_panel_ctrl.output_vmd_file_ctrl.file_ctrl.GetPath(), \

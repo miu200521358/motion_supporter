@@ -44,7 +44,7 @@ class NoiseWorkerThread(BaseWorkerThread):
                 self.options = MNoiseOptions(\
                     version_name=self.frame.version_name, \
                     logging_level=self.frame.logging_level, \
-                    motion=self.frame.noise_panel_ctrl.noise_vmd_file_ctrl.data, \
+                    motion=self.frame.noise_panel_ctrl.noise_vmd_file_ctrl.data.copy(), \
                     model=dummy_model, \
                     noise_size=self.frame.noise_panel_ctrl.noise_size_ctrl.GetValue(), \
                     copy_cnt=self.frame.noise_panel_ctrl.copy_cnt_ctrl.GetValue(), \

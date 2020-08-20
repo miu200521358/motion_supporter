@@ -175,7 +175,8 @@ class ConvertMultiSplitService():
         logger.info("-- 分割完了【%s】", bone_name)
 
         # 元のボーン削除
-        del motion.bones[bone_name]
+        if rrxbn != bone_name and rrybn != bone_name and rrzbn != bone_name and rmxbn != bone_name and rmybn != bone_name and rmzbn != bone_name:
+            del motion.bones[bone_name]
 
         # 不要キー削除
         futures = []

@@ -100,12 +100,13 @@ class ConvertMultiJoinService():
                 rz_bf = motion.calc_bf(rrzbn, fno) if len(rrzbn) > 0 else VmdBoneFrame(fno)
                 bf.rotation = ry_bf.rotation * rx_bf.rotation * rz_bf.rotation
 
+            if model.bones[bone_name].getTranslatable():
                 mx_bf = motion.calc_bf(rmxbn, fno) if len(rmxbn) > 0 else VmdBoneFrame(fno)
                 my_bf = motion.calc_bf(rmybn, fno) if len(rmybn) > 0 else VmdBoneFrame(fno)
                 mz_bf = motion.calc_bf(rmzbn, fno) if len(rmzbn) > 0 else VmdBoneFrame(fno)
                 bf.position = my_bf.position + mx_bf.position + mz_bf.position
 
-                motion.regist_bf(bf, bone_name, fno)
+            motion.regist_bf(bf, bone_name, fno)
 
             if fno // 500 > prev_sep_fno and fnos[-1] > 0:
                 logger.info("-- %sフレーム目:終了(%s％)【多段統合 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
@@ -114,22 +115,22 @@ class ConvertMultiJoinService():
         logger.info("-- 統合完了【%s】", bone_name)
 
         # 元のボーン削除
-        if len(rrxbn) > 0 and rrxbn in motion.bones:
+        if len(rrxbn) > 0 and rrxbn in motion.bones and rrxbn != bone_name:
             del motion.bones[rrxbn]
-        if len(rrybn) > 0 and rrybn in motion.bones:
+        if len(rrybn) > 0 and rrybn in motion.bones and rrybn != bone_name:
             del motion.bones[rrybn]
-        if len(rrzbn) > 0 and rrzbn in motion.bones:
+        if len(rrzbn) > 0 and rrzbn in motion.bones and rrzbn != bone_name:
             del motion.bones[rrzbn]
-        if len(rmxbn) > 0 and rmxbn in motion.bones:
+        if len(rmxbn) > 0 and rmxbn in motion.bones and rmxbn != bone_name:
             del motion.bones[rmxbn]
-        if len(rmybn) > 0 and rmybn in motion.bones:
+        if len(rmybn) > 0 and rmybn in motion.bones and rmybn != bone_name:
             del motion.bones[rmybn]
-        if len(rmzbn) > 0 and rmzbn in motion.bones:
+        if len(rmzbn) > 0 and rmzbn in motion.bones and rmzbn != bone_name:
             del motion.bones[rmzbn]
 
         # 不要キー削除
         self.options.motion.remove_unnecessary_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
-                                                  self.options.model.bones[bone_name].getTranslatable(), rot_diff_limit=0.005, mov_diff_limit=0.05)
+                                                  self.options.model.bones[bone_name].getTranslatable(), rot_diff_limit=0.001, mov_diff_limit=0.01)
         
         return True
 

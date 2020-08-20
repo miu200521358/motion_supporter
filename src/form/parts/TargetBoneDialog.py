@@ -353,6 +353,9 @@ class TargetBoneDialog(wx.Dialog):
         # 同じ選択肢を初期設定
         if len(self.org_choices[midx].GetValue()) == 0 or len(text) == 0:
             self.org_choices[midx].SetValue(text)
+            cidx = self.org_choices[midx].FindString(text)
+            if cidx >= 0:
+                self.org_choices[midx].SetSelection(cidx)
 
         if text in self.panel.model_file_ctrl.data.bones:
             bone_data = self.panel.model_file_ctrl.data.bones[text]
@@ -361,27 +364,58 @@ class TargetBoneDialog(wx.Dialog):
                 # 移動ボーン
                 if len(self.rep_mx_choices[midx].GetValue()) == 0:
                     self.rep_mx_choices[midx].SetValue(text)
+                    cidx = self.rep_mx_choices[midx].FindString(text)
+                    if cidx >= 0:
+                        self.rep_mx_choices[midx].SetSelection(cidx)
+
                 if len(self.rep_my_choices[midx].GetValue()) == 0:
                     self.rep_my_choices[midx].SetValue(text)
+                    cidx = self.rep_my_choices[midx].FindString(text)
+                    if cidx >= 0:
+                        self.rep_my_choices[midx].SetSelection(cidx)
+
                 if len(self.rep_mz_choices[midx].GetValue()) == 0:
                     self.rep_mz_choices[midx].SetValue(text)
+                    cidx = self.rep_mz_choices[midx].FindString(text)
+                    if cidx >= 0:
+                        self.rep_mz_choices[midx].SetSelection(cidx)
 
             if bone_data.getRotatable():
                 # 回転ボーン
                 if len(self.rep_rx_choices[midx].GetValue()) == 0:
                     self.rep_rx_choices[midx].SetValue(text)
+                    cidx = self.rep_rx_choices[midx].FindString(text)
+                    if cidx >= 0:
+                        self.rep_rx_choices[midx].SetSelection(cidx)
+
                 if len(self.rep_ry_choices[midx].GetValue()) == 0:
                     self.rep_ry_choices[midx].SetValue(text)
+                    cidx = self.rep_ry_choices[midx].FindString(text)
+                    if cidx >= 0:
+                        self.rep_ry_choices[midx].SetSelection(cidx)
+
                 if len(self.rep_rz_choices[midx].GetValue()) == 0:
                     self.rep_rz_choices[midx].SetValue(text)
+                    cidx = self.rep_rz_choices[midx].FindString(text)
+                    if cidx >= 0:
+                        self.rep_rz_choices[midx].SetSelection(cidx)
+
         elif len(text) == 0:
             # 空にした場合は空に
+            self.org_choices[midx].SetValue("")
+            self.org_choices[midx].SetSelection(-1)
             self.rep_mx_choices[midx].SetValue("")
+            self.rep_mx_choices[midx].SetSelection(-1)
             self.rep_my_choices[midx].SetValue("")
+            self.rep_my_choices[midx].SetSelection(-1)
             self.rep_mz_choices[midx].SetValue("")
+            self.rep_mz_choices[midx].SetSelection(-1)
             self.rep_rx_choices[midx].SetValue("")
+            self.rep_rx_choices[midx].SetSelection(-1)
             self.rep_ry_choices[midx].SetValue("")
+            self.rep_ry_choices[midx].SetSelection(-1)
             self.rep_rz_choices[midx].SetValue("")
+            self.rep_rz_choices[midx].SetSelection(-1)
 
         # 最後である場合、行追加
         if midx == len(self.org_choices) - 1 and self.org_choices[midx].GetSelection() > 0 and \

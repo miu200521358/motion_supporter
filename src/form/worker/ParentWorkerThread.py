@@ -41,7 +41,7 @@ class ParentWorkerThread(BaseWorkerThread):
                 self.options = MParentOptions(\
                     version_name=self.frame.version_name, \
                     logging_level=self.frame.logging_level, \
-                    motion=self.frame.parent_panel_ctrl.parent_vmd_file_ctrl.data, \
+                    motion=self.frame.parent_panel_ctrl.parent_vmd_file_ctrl.data.copy(), \
                     model=self.frame.parent_panel_ctrl.parent_model_file_ctrl.data, \
                     output_path=self.frame.parent_panel_ctrl.output_parent_vmd_file_ctrl.file_ctrl.GetPath(), \
                     center_rotatation_flg=self.frame.parent_panel_ctrl.center_rotatation_flg_ctrl.GetValue(), \
