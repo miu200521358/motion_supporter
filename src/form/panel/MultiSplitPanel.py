@@ -584,8 +584,8 @@ class TargetBoneDialog(wx.Dialog):
 
     def add_line(self):
         # 置換前ボーン
-        self.org_choices.append(wx.Choice(self.window, id=wx.ID_ANY, choices=self.org_bones))
-        self.org_choices[-1].Bind(wx.EVT_CHOICE, lambda event: self.on_change_choice(event, len(self.org_choices) - 1))
+        self.org_choices.append(wx.ComboBox(self.window, id=wx.ID_ANY, choices=self.org_bones, style=wx.CB_DROPDOWN))
+        self.org_choices[-1].Bind(wx.EVT_COMBOBOX, lambda event: self.on_change_choice(event, len(self.org_choices) - 1))
         self.grid_sizer.Add(self.org_choices[-1], 0, wx.ALL, 5)
 
         # 矢印
@@ -594,33 +594,33 @@ class TargetBoneDialog(wx.Dialog):
         self.grid_sizer.Add(self.arrow_txt, 0, wx.CENTER | wx.ALL, 5)
 
         # 置換後ボーン(RX)
-        self.rep_rx_choices.append(wx.Choice(self.window, id=wx.ID_ANY, choices=self.rep_bones))
-        self.rep_rx_choices[-1].Bind(wx.EVT_CHOICE, lambda event: self.on_change_choice(event, len(self.rep_rx_choices) - 1))
+        self.rep_rx_choices.append(wx.ComboBox(self.window, id=wx.ID_ANY, choices=self.rep_bones, style=wx.CB_DROPDOWN))
+        self.rep_rx_choices[-1].Bind(wx.EVT_COMBOBOX, lambda event: self.on_change_choice(event, len(self.rep_rx_choices) - 1))
         self.grid_sizer.Add(self.rep_rx_choices[-1], 0, wx.ALL, 5)
 
         # 置換後ボーン(RY)
-        self.rep_ry_choices.append(wx.Choice(self.window, id=wx.ID_ANY, choices=self.rep_bones))
-        self.rep_ry_choices[-1].Bind(wx.EVT_CHOICE, lambda event: self.on_change_choice(event, len(self.rep_ry_choices) - 1))
+        self.rep_ry_choices.append(wx.ComboBox(self.window, id=wx.ID_ANY, choices=self.rep_bones, style=wx.CB_DROPDOWN))
+        self.rep_ry_choices[-1].Bind(wx.EVT_COMBOBOX, lambda event: self.on_change_choice(event, len(self.rep_ry_choices) - 1))
         self.grid_sizer.Add(self.rep_ry_choices[-1], 0, wx.ALL, 5)
 
         # 置換後ボーン(RZ)
-        self.rep_rz_choices.append(wx.Choice(self.window, id=wx.ID_ANY, choices=self.rep_bones))
-        self.rep_rz_choices[-1].Bind(wx.EVT_CHOICE, lambda event: self.on_change_choice(event, len(self.rep_rz_choices) - 1))
+        self.rep_rz_choices.append(wx.ComboBox(self.window, id=wx.ID_ANY, choices=self.rep_bones, style=wx.CB_DROPDOWN))
+        self.rep_rz_choices[-1].Bind(wx.EVT_COMBOBOX, lambda event: self.on_change_choice(event, len(self.rep_rz_choices) - 1))
         self.grid_sizer.Add(self.rep_rz_choices[-1], 0, wx.ALL, 5)
 
         # 置換後ボーン(MX)
-        self.rep_mx_choices.append(wx.Choice(self.window, id=wx.ID_ANY, choices=self.rep_bones))
-        self.rep_mx_choices[-1].Bind(wx.EVT_CHOICE, lambda event: self.on_change_choice(event, len(self.rep_mx_choices) - 1))
+        self.rep_mx_choices.append(wx.ComboBox(self.window, id=wx.ID_ANY, choices=self.rep_bones, style=wx.CB_DROPDOWN))
+        self.rep_mx_choices[-1].Bind(wx.EVT_COMBOBOX, lambda event: self.on_change_choice(event, len(self.rep_mx_choices) - 1))
         self.grid_sizer.Add(self.rep_mx_choices[-1], 0, wx.ALL, 5)
 
         # 置換後ボーン(MY)
-        self.rep_my_choices.append(wx.Choice(self.window, id=wx.ID_ANY, choices=self.rep_bones))
-        self.rep_my_choices[-1].Bind(wx.EVT_CHOICE, lambda event: self.on_change_choice(event, len(self.rep_my_choices) - 1))
+        self.rep_my_choices.append(wx.ComboBox(self.window, id=wx.ID_ANY, choices=self.rep_bones, style=wx.CB_DROPDOWN))
+        self.rep_my_choices[-1].Bind(wx.EVT_COMBOBOX, lambda event: self.on_change_choice(event, len(self.rep_my_choices) - 1))
         self.grid_sizer.Add(self.rep_my_choices[-1], 0, wx.ALL, 5)
 
         # 置換後ボーン(MZ)
-        self.rep_mz_choices.append(wx.Choice(self.window, id=wx.ID_ANY, choices=self.rep_bones))
-        self.rep_mz_choices[-1].Bind(wx.EVT_CHOICE, lambda event: self.on_change_choice(event, len(self.rep_mz_choices) - 1))
+        self.rep_mz_choices.append(wx.ComboBox(self.window, id=wx.ID_ANY, choices=self.rep_bones, style=wx.CB_DROPDOWN))
+        self.rep_mz_choices[-1].Bind(wx.EVT_COMBOBOX, lambda event: self.on_change_choice(event, len(self.rep_mz_choices) - 1))
         self.grid_sizer.Add(self.rep_mz_choices[-1], 0, wx.ALL, 5)
 
         # スクロールバーの表示のためにサイズ調整
@@ -640,6 +640,33 @@ class TargetBoneDialog(wx.Dialog):
         return False
 
     def on_change_choice(self, event: wx.Event, midx: int):
+        text = event.GetEventObject().GetStringSelection()
+
+        # 同じ選択肢を初期設定
+        if len(self.org_choices[midx].GetValue()) == 0:
+            self.org_choices[midx].SetValue(text)
+
+        if text in self.panel.model_file_ctrl.data.bones:
+            bone_data = self.panel.model_file_ctrl.data.bones[text]
+
+            if bone_data.getTranslatable():
+                # 移動ボーン
+                if len(self.rep_mx_choices[midx].GetValue()) == 0:
+                    self.rep_mx_choices[midx].SetValue(text)
+                if len(self.rep_my_choices[midx].GetValue()) == 0:
+                    self.rep_my_choices[midx].SetValue(text)
+                if len(self.rep_mz_choices[midx].GetValue()) == 0:
+                    self.rep_mz_choices[midx].SetValue(text)
+
+            if bone_data.getRotatable():
+                # 回転ボーン
+                if len(self.rep_rx_choices[midx].GetValue()) == 0:
+                    self.rep_rx_choices[midx].SetValue(text)
+                if len(self.rep_ry_choices[midx].GetValue()) == 0:
+                    self.rep_ry_choices[midx].SetValue(text)
+                if len(self.rep_rz_choices[midx].GetValue()) == 0:
+                    self.rep_rz_choices[midx].SetValue(text)
+
         # 最後である場合、行追加
         if midx == len(self.org_choices) - 1 and self.org_choices[midx].GetSelection() > 0 and \
                 (self.rep_mx_choices[midx].GetSelection() > 0 or self.rep_my_choices[midx].GetSelection() > 0 or self.rep_mz_choices[midx].GetSelection() > 0 \

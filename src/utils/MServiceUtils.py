@@ -120,60 +120,65 @@ def separate_local_qq(fno: int, bone_name: str, qq: MQuaternion, global_x_axis: 
     # YZの回転量（自身のねじれを無視する）
     yz_qq = MQuaternion.rotationTo(global_x_axis, mat_x1_vec)
 
-    # 除去されたX成分を求める
-    mat_x2 = MMatrix4x4()
-    mat_x2.setToIdentity()              # 初期化
-    mat_x2.rotate(qq)                   # 元々の回転量
+    # # 除去されたX成分を求める
+    # mat_x2 = MMatrix4x4()
+    # mat_x2.setToIdentity()              # 初期化
+    # mat_x2.rotate(qq)                   # 元々の回転量
 
-    mat_x3 = MMatrix4x4()
-    mat_x3.setToIdentity()              # 初期化
-    mat_x3.rotate(yz_qq)                # YZの回転量
+    # mat_x3 = MMatrix4x4()
+    # mat_x3.setToIdentity()              # 初期化
+    # mat_x3.rotate(yz_qq)                # YZの回転量
 
-    x_qq = (mat_x2 * mat_x3.inverted()).toQuaternion()
+    # x_qq = (mat_x2 * mat_x3.inverted()).toQuaternion()
 
-    # YZ回転からZ成分を抽出する --------------
+    # YZ回転からY成分を抽出する --------------
 
-    mat_z1 = MMatrix4x4()
-    mat_z1.setToIdentity()              # 初期化
-    mat_z1.rotate(yz_qq)                # YZの回転量
-    mat_z1.rotate(global2local_qq)      # グローバル軸の回転量からローカルの回転量に変換
-    mat_z1.translate(local_axis)        # ローカル軸方向に伸ばす
-    
-    mat_z1_vec = mat_z1 * MVector3D()
-    mat_z1_vec.setZ(0)                  # Z方向の移動量を潰す
-
-    # ローカル軸からZを潰した移動への回転量
-    local_z_qq = MQuaternion.rotationTo(local_axis, mat_z1_vec)
-
-    # ボーンローカル座標系の回転をグローバル座標系の回転に戻す
-    mat_z2 = MMatrix4x4()
-    mat_z2.setToIdentity()              # 初期化
-    mat_z2.rotate(local_z_qq)           # ローカル軸上のZ回転
-    mat_z2.rotate(local2global_qq)      # ローカル軸上からグローバル軸上に変換
-
-    z_qq = mat_z2.toQuaternion()
-
-    # YZ回転からY成分だけ取り出す -----------
-    
     mat_y1 = MMatrix4x4()
     mat_y1.setToIdentity()              # 初期化
-    mat_y1.rotate(yz_qq)                # グローバルYZの回転量
+    mat_y1.rotate(yz_qq)                # YZの回転量
 
     mat_y2 = MMatrix4x4()
     mat_y2.setToIdentity()              # 初期化
-    mat_y2.rotate(z_qq)                 # グローバルZの回転量
-    mat_y2_qq = (mat_y1 * mat_y2.inverted()).toQuaternion()
+    mat_y2.rotate(global2local_qq)      # グローバル軸の回転量からローカルの回転量に変換
+
+    mat_y1_vec = mat_y1 * mat_y2 * local_axis
+    mat_y1_vec.setY(0)                  # Y方向の移動量を潰す
+
+    # ローカル軸からYを潰した移動への回転量
+    local_y_qq = MQuaternion.rotationTo(local_axis, mat_y1_vec.normalized())
+
+    # ボーンローカル座標系の回転をグローバル座標系の回転に戻す
+    mat_y3 = MMatrix4x4()
+    mat_y3.setToIdentity()              # 初期化
+    mat_y3.rotate(local_y_qq)           # ローカル軸上のY回転
+
+    mat_y4 = MMatrix4x4()
+    mat_y4.setToIdentity()              # 初期化
+    mat_y4.rotate(local2global_qq)      # ローカル軸上からグローバル軸上に変換
+
+    y_qq = (mat_y3 * mat_y4).toQuaternion()
+
+    # YZ回転からZ成分だけ取り出す -----------
+    
+    mat_z1 = MMatrix4x4()
+    mat_z1.setToIdentity()              # 初期化
+    mat_z1.rotate(yz_qq)                # グローバルYZの回転量
+
+    mat_z2 = MMatrix4x4()
+    mat_z2.setToIdentity()              # 初期化
+    mat_z2.rotate(y_qq)                 # グローバルYの回転量
+    mat_z2_qq = (mat_z1 * mat_z2.inverted()).toQuaternion()
 
     # X成分の捻れが混入したので、XY回転からYZ回転を取り出すことでXキャンセルをかける。
-    mat_y3 = MMatrix4x4()
-    mat_y3.setToIdentity()
-    mat_y3.rotate(mat_y2_qq)
-    mat_y3.translate(global_x_axis)
-    mat_y3_vec = mat_y3 * MVector3D()
+    mat_z3 = MMatrix4x4()
+    mat_z3.setToIdentity()
+    mat_z3.rotate(mat_z2_qq)
+    mat_z3.translate(global_x_axis)
+    mat_z3_vec = mat_z3 * MVector3D()
 
-    y_qq = MQuaternion.rotationTo(global_x_axis, mat_y3_vec)
+    z_qq = MQuaternion.rotationTo(global_x_axis, mat_z3_vec)
 
-    # Xを再度求める -------------
+    # Xを求める -------------
 
     mat_x4 = MMatrix4x4()
     mat_x4.setToIdentity()
@@ -188,6 +193,18 @@ def separate_local_qq(fno: int, bone_name: str, qq: MQuaternion, global_x_axis: 
     mat_x6.rotate(z_qq)
 
     x_qq = (mat_x5.inverted() * mat_x4 * mat_x6.inverted()).toQuaternion()
+
+    # mat_x7 = MMatrix4x4()
+    # mat_x7.setToIdentity()
+    # mat_x7.rotate(x_qq)
+
+    # y_qq = (mat_x4 * mat_x7.inverted() * mat_x6.inverted()).toQuaternion()
+
+    # mat_x8 = MMatrix4x4()
+    # mat_x8.setToIdentity()
+    # mat_x8.rotate(y_qq)
+
+    # z_qq = (mat_x8.inverted() * mat_x7.inverted() * mat_x4).toQuaternion()
 
     return x_qq, y_qq, z_qq, yz_qq
 

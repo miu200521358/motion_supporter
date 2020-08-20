@@ -128,7 +128,7 @@ def calc_catmull_rom_one_point(x, v0, v1, v2, v3):
 def join_value_2_bezier(fno: int, bone_name: str, values: list, offset=0, diff_limit=0.01):
     if np.isclose(np.max(np.array(values)), np.min(np.array(values)), atol=1e-6) or len(values) <= 2:
         # すべてがだいたい同じ値（最小と最大が同じ値)か次数が1の場合、線形補間
-        return LINEAR_MMD_INTERPOLATION, []
+        return (LINEAR_MMD_INTERPOLATION, [])
 
     try:
         # Xは次数（フレーム数）分移動
@@ -142,7 +142,7 @@ def join_value_2_bezier(fno: int, bone_name: str, values: list, offset=0, diff_l
 
         if len(bz_x) == 0:
             # 始点と終点が指定されていて、カトマル曲線が描けなかった場合、線形補間
-            return LINEAR_MMD_INTERPOLATION, []
+            return (LINEAR_MMD_INTERPOLATION, [])
 
         # 次数
         degree = len(bz_x) - 1
@@ -215,8 +215,8 @@ def join_value_2_bezier(fno: int, bone_name: str, values: list, offset=0, diff_l
         reduced_ys = intersect_by_x(joined_curve, bezier_x)
         logger.test("f: %s, %s, reduced_ys: %s", fno, bone_name, reduced_ys)
 
-        # 交点の差を取得する
-        diff_ys = np.array(full_ys) - np.array(reduced_ys)
+        # 交点の差を取得する(前後は必ず一致)
+        diff_ys = np.concatenate([[0], np.array(full_ys) - np.array(reduced_ys), [0]])
 
         # 差が大きい箇所をピックアップする
         diff_large = np.where(np.abs(diff_ys) > (diff_limit * (offset + 1)), 1, 0)
@@ -233,22 +233,21 @@ def join_value_2_bezier(fno: int, bone_name: str, values: list, offset=0, diff_l
 
         if np.count_nonzero(diff_large) > 0:
             # 差が大きい箇所がある場合、分割不可
-            return None, np.where(diff_large)
+            return (None, np.where(diff_large))
 
         if not is_fit_bezier_mmd(joined_bz, offset):
             # 補間曲線がMMD補間曲線内に収まらない場合、NG
-            # 後ろから再結合を試す
-            return None, [len(values) - 2]
+            return (None, [])
         
         # オフセット込みの場合、MMD用補間曲線枠内に収める
         fit_bezier_mmd(joined_bz)
         
         # すべてクリアした場合、補間曲線採用
-        return joined_bz, []
+        return (joined_bz, [])
     except Exception as e:
         # エラーレベルは落として表に出さない
         logger.debug("ベジェ曲線生成失敗", e)
-        return None, []
+        return (None, [])
 
 
 def fit_bezier_mmd(bzs):

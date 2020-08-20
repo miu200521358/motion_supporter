@@ -80,8 +80,13 @@ class ConvertMultiSplitService():
         motion = self.options.motion
         model = self.options.model
 
+        # # 事前に細分化
+        # self.prepare_split_stance(motion, bone_name)
+        # logger.info("-- 分離準備【%s】", bone_name)
+
         # 事前に変化量全打ち(移動はあるキーだけ計測)
-        fnos = motion.get_differ_fnos(0, [bone_name], limit_degrees=10, limit_length=-1)
+        # fnos = motion.get_differ_fnos(0, [bone_name], limit_degrees=30, limit_length=-1)
+        fnos = motion.get_bone_fnos(bone_name)
 
         if len(fnos) == 0:
             return
@@ -207,6 +212,10 @@ class ConvertMultiSplitService():
     # 不要キー削除
     def remove_unnecessary_bf(self, bone_name: str):
         try:
+            # # 念のため細分化
+            # self.prepare_split_stance(self.options.motion, bone_name)
+            # logger.info("-- 分離準備【%s】", bone_name)
+
             self.options.motion.remove_unnecessary_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
                                                       self.options.model.bones[bone_name].getTranslatable())
 
@@ -220,5 +229,26 @@ class ConvertMultiSplitService():
             import traceback
             logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
             raise e
+
+    # スタンス用細分化
+    def prepare_split_stance(self, motion: VmdMotion, target_bone_name: str):
+        fnos = motion.get_bone_fnos(target_bone_name)
+
+        for fidx, fno in enumerate(fnos):
+            if fidx == 0:
+                continue
+
+            prev_bf = motion.bones[target_bone_name][fnos[fidx - 1]]
+            bf = motion.bones[target_bone_name][fno]
+            diff_degree = abs(prev_bf.rotation.toDegree() - bf.rotation.toDegree())
+
+            if diff_degree >= 150:
+                # 回転量が約150度以上の場合、半分に分割しておく
+                half_fno = prev_bf.fno + round((bf.fno - prev_bf.fno) / 2)
+
+                if prev_bf.fno < half_fno < bf.fno:
+                    # キーが追加できる状態であれば、追加
+                    half_bf = motion.calc_bf(target_bone_name, half_fno)
+                    motion.regist_bf(half_bf, target_bone_name, half_fno)
 
 
