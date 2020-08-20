@@ -74,9 +74,7 @@ class ConvertMultiJoinService():
         motion = self.options.motion
         model = self.options.model
 
-        # 事前に全打ち
-        # fnos = motion.get_differ_fnos(0, [rrxbn, rrybn, rrzbn, rmxbn, rmybn, rmzbn], limit_degrees=5, limit_length=0.1)
-        fnos = motion.get_bone_fnos(bone_name)
+        fnos = motion.get_bone_fnos(rrxbn, rrybn, rrzbn, rmxbn, rmybn, rmzbn)
 
         if len(fnos) == 0:
             return
@@ -86,34 +84,14 @@ class ConvertMultiJoinService():
             bf = motion.calc_bf(bone_name, fno)
             motion.regist_bf(bf, bone_name, fno)
 
-            if model.bones[bone_name].getRotatable():
-                rx_bf = motion.calc_bf(rrxbn, fno)
-                motion.regist_bf(rx_bf, rx_bf.name, fno)
-
-                ry_bf = motion.calc_bf(rrybn, fno)
-                motion.regist_bf(ry_bf, ry_bf.name, fno)
-                
-                rz_bf = motion.calc_bf(rrzbn, fno)
-                motion.regist_bf(rz_bf, rz_bf.name, fno)
-                
-            if model.bones[bone_name].getTranslatable():
-                mx_bf = motion.calc_bf(rmxbn, fno)
-                motion.regist_bf(mx_bf, mx_bf.name, fno)
-
-                my_bf = motion.calc_bf(rmybn, fno)
-                motion.regist_bf(my_bf, my_bf.name, fno)
-
-                mz_bf = motion.calc_bf(rmzbn, fno)
-                motion.regist_bf(mz_bf, mz_bf.name, fno)
-
-            if fno // 1000 > prev_sep_fno and fnos[-1] > 0:
+            if fno // 500 > prev_sep_fno and fnos[-1] > 0:
                 logger.info("-- %sフレーム目:終了(%s％)【キーフレ追加 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
-                prev_sep_fno = fno // 1000
+                prev_sep_fno = fno // 500
 
         logger.info("-- 準備完了【%s】", bone_name)
 
         prev_sep_fno = 0
-        for fno in fnos:
+        for fno in range(fnos[-1] + 1):
             bf = motion.calc_bf(bone_name, fno)
 
             if model.bones[bone_name].getRotatable():
@@ -129,9 +107,9 @@ class ConvertMultiJoinService():
 
                 motion.regist_bf(bf, bone_name, fno)
 
-            if fno // 1000 > prev_sep_fno and fnos[-1] > 0:
+            if fno // 500 > prev_sep_fno and fnos[-1] > 0:
                 logger.info("-- %sフレーム目:終了(%s％)【多段統合 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
-                prev_sep_fno = fno // 1000
+                prev_sep_fno = fno // 500
 
         logger.info("-- 統合完了【%s】", bone_name)
 
@@ -151,7 +129,7 @@ class ConvertMultiJoinService():
 
         # 不要キー削除
         self.options.motion.remove_unnecessary_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
-                                                  self.options.model.bones[bone_name].getTranslatable())
+                                                  self.options.model.bones[bone_name].getTranslatable(), rot_diff_limit=0.005, mov_diff_limit=0.05)
         
         return True
 

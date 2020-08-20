@@ -44,7 +44,7 @@ class ParentPanel(BasePanel):
         # 対象PMXファイルコントロール
         self.parent_model_file_ctrl = HistoryFilePickerCtrl(self.frame, self, u"適用モデルPMX", u"適用モデルPMXファイルを開く", ("pmx"), wx.FLP_DEFAULT_STYLE, \
                                                             u"モーションを適用したいモデルのPMXパスを指定してください。\n人体モデル以外にも適用可能です。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。", \
-                                                            file_model_spacer=0, title_parts_ctrl=None, title_parts2_ctrl=None, file_histories_key="parent_pmx", \
+                                                            file_model_spacer=60, title_parts_ctrl=None, title_parts2_ctrl=None, file_histories_key="parent_pmx", \
                                                             is_change_output=True, is_aster=False, is_save=False, set_no=1)
         self.header_sizer.Add(self.parent_model_file_ctrl.sizer, 1, wx.EXPAND, 0)
 

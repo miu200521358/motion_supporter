@@ -236,7 +236,7 @@ class VmdMotion():
                 continue
             
             before_bf = self.calc_bf(bone_name, 0)  # 比較対象bf
-            for fno in range(1, bone_fnos[-1]):
+            for fno in range(1, bone_fnos[-1] + 1):
                 bf = self.calc_bf(bone_name, fno)
 
                 if bf.read:
@@ -379,7 +379,7 @@ class VmdMotion():
     # 変曲点を求める
     # https://teratail.com/questions/162391
     def remove_unnecessary_bf(self, data_set_no: int, bone_name: str, is_rot: bool, is_mov: bool, \
-                              offset=0, rot_diff_limit=0.1, mov_diff_limit=0.1, start_fno=-1, end_fno=-1, is_show_log=True, is_force=False):
+                              offset=0, rot_diff_limit=0.01, mov_diff_limit=0.1, start_fno=-1, end_fno=-1, is_show_log=True, is_force=False):
         prev_sep_fno = 0
 
         # キーフレを取得する
@@ -400,6 +400,7 @@ class VmdMotion():
         mx_values = []
         my_values = []
         mz_values = []
+        key_cnt = 0
         while fno <= fnos[-1]:
             bf = self.calc_bf(bone_name, fno)
 
@@ -414,7 +415,58 @@ class VmdMotion():
                 # キーが無効であれば、とりあえず次へ
                 fno += 1
                 continue
+            else:
+                # キーが有効ならカウント
+                key_cnt += 1
             
+            if key_cnt > 1:
+                # 他の有効キーをふくむ場合、単調増加としてキーを結合してみる
+                (joined_rot_bzs, rot_inflection) = MBezierUtils.join_value_2_bezier(fno, bone_name, rot_values, \
+                                                                                    offset=offset, diff_limit=rot_diff_limit) if is_rot else (True, [])
+                (joined_mx_bzs, mx_inflection) = MBezierUtils.join_value_2_bezier(fno, bone_name, mx_values, \
+                                                                                  offset=offset, diff_limit=mov_diff_limit) if is_mov else (True, [])
+                (joined_my_bzs, my_inflection) = MBezierUtils.join_value_2_bezier(fno, bone_name, my_values, \
+                                                                                  offset=offset, diff_limit=mov_diff_limit) if is_mov else (True, [])
+                (joined_mz_bzs, mz_inflection) = MBezierUtils.join_value_2_bezier(fno, bone_name, mz_values, \
+                                                                                  offset=offset, diff_limit=mov_diff_limit) if is_mov else (True, [])
+
+                if joined_rot_bzs and joined_mx_bzs and joined_my_bzs and joined_mz_bzs:
+                    next_bf = self.calc_bf(bone_name, fno)
+                    # 結合できた場合、補間曲線をnextに設定
+                    if is_rot:
+                        logger.debug("☆%s: fno: %s, キー:回転補間曲線成功: 1: %s, 2: %s", bone_name, fno, joined_rot_bzs[1].to_log(), joined_rot_bzs[2].to_log())
+                        self.reset_interpolation_parts(bone_name, next_bf, joined_rot_bzs, MBezierUtils.R_x1_idxs, MBezierUtils.R_y1_idxs, MBezierUtils.R_x2_idxs, MBezierUtils.R_y2_idxs)
+                    
+                    if is_mov:
+                        logger.debug("☆%s: fno: %s, キー:移動X補間曲線成功: 1: %s, 2: %s", bone_name, fno, joined_mx_bzs[1].to_log(), joined_mx_bzs[2].to_log())
+                        logger.debug("☆%s: fno: %s, キー:移動Y補間曲線成功: 1: %s, 2: %s", bone_name, fno, joined_my_bzs[1].to_log(), joined_my_bzs[2].to_log())
+                        logger.debug("☆%s: fno: %s, キー:移動Z補間曲線成功: 1: %s, 2: %s", bone_name, fno, joined_mz_bzs[1].to_log(), joined_mz_bzs[2].to_log())
+                        self.reset_interpolation_parts(bone_name, next_bf, joined_mx_bzs, MBezierUtils.MX_x1_idxs, MBezierUtils.MX_y1_idxs, MBezierUtils.MX_x2_idxs, MBezierUtils.MX_y2_idxs)
+                        self.reset_interpolation_parts(bone_name, next_bf, joined_my_bzs, MBezierUtils.MY_x1_idxs, MBezierUtils.MY_y1_idxs, MBezierUtils.MY_x2_idxs, MBezierUtils.MY_y2_idxs)
+                        self.reset_interpolation_parts(bone_name, next_bf, joined_mz_bzs, MBezierUtils.MZ_x1_idxs, MBezierUtils.MZ_y1_idxs, MBezierUtils.MZ_x2_idxs, MBezierUtils.MZ_y2_idxs)
+
+                    self.regist_bf(next_bf, bone_name, fno, copy_interpolation=True)
+
+                    for f in range(start_fno + 1, fno):
+                        # 結合できた場合、区間内を削除
+                        if f in self.bones[bone_name]:
+                            logger.debug("☆%s: fno: %s, キー:キーフレ削除: %s", bone_name, fno, f)
+                            del self.bones[bone_name][f]
+                    
+                    fno += 1
+                    key_cnt = 1
+
+                    # 変曲点処理は不要
+                    continue
+                else:
+                    # 結合できなかった場合、変曲点チェックに移る
+                    logger.debug("★%s: fno: %s, キー:補間曲線失敗: rot_inflection: %s, mx_inflection: %s, my_inflection: %s, mz_inflection: %s", \
+                                 bone_name, fno, rot_inflection, mx_inflection, my_inflection, mz_inflection)
+            else:
+                logger.debug("☆%s: 中間有効キーなしスルー: %s, start_fno: %s", bone_name, fno, start_fno)
+                fno += 1
+                continue
+
             # 近似差分から変曲点を求める
             # https://teratail.com/questions/162391
             rot_indices = []
@@ -425,7 +477,6 @@ class VmdMotion():
                 rot_f_prime = np.gradient(rot_values)
                 rot_sign = np.concatenate([[0], [0], np.diff(np.sign(np.diff(rot_f_prime)))])
                 rot_indices = np.where(np.abs(rot_sign) > 1)[0]
-                rot_indices = rot_indices[1:] if len(rot_indices) > 1 else []
                 logger.debug("%s: fno: %s, rot_values: %s", bone_name, fno, rot_values)
                 logger.debug("%s: fno: %s, f_prime: %s", bone_name, fno, rot_f_prime)
                 logger.debug("%s: fno: %s, sign: %s", bone_name, fno, rot_sign)
@@ -435,7 +486,6 @@ class VmdMotion():
                 mx_f_prime = np.gradient(mx_values)
                 mx_sign = np.concatenate([[0], [0], np.diff(np.sign(np.diff(mx_f_prime)))])
                 mx_indices = np.where(np.abs(mx_sign) > 1)[0]
-                mx_indices = mx_indices[1:] if len(mx_indices) > 1 else []
                 logger.debug("%s: fno: %s, mx_values: %s", bone_name, fno, mx_values)
                 logger.debug("%s: fno: %s, f_prime: %s", bone_name, fno, mx_f_prime)
                 logger.debug("%s: fno: %s, sign: %s", bone_name, fno, mx_sign)
@@ -444,7 +494,6 @@ class VmdMotion():
                 my_f_prime = np.gradient(my_values)
                 my_sign = np.concatenate([[0], [0], np.diff(np.sign(np.diff(my_f_prime)))])
                 my_indices = np.where(np.abs(my_sign) > 1)[0]
-                my_indices = my_indices[1:] if len(my_indices) > 1 else []
                 logger.debug("%s: fno: %s, my_values: %s", bone_name, fno, my_values)
                 logger.debug("%s: fno: %s, f_prime: %s", bone_name, fno, my_f_prime)
                 logger.debug("%s: fno: %s, sign: %s", bone_name, fno, my_sign)
@@ -453,14 +502,13 @@ class VmdMotion():
                 mz_f_prime = np.gradient(mz_values)
                 mz_sign = np.concatenate([[0], [0], np.diff(np.sign(np.diff(mz_f_prime)))])
                 mz_indices = np.where(np.abs(mz_sign) > 1)[0]
-                mz_indices = mz_indices[1:] if len(mz_indices) > 1 else []
                 logger.debug("%s: fno: %s, mz_values: %s", bone_name, fno, mz_values)
                 logger.debug("%s: fno: %s, f_prime: %s", bone_name, fno, mz_f_prime)
                 logger.debug("%s: fno: %s, sign: %s", bone_name, fno, mz_sign)
                 logger.debug("%s: fno: %s, mz_indices: %s", bone_name, fno, mz_indices)
                 
-                # 不要なキーを連結する
             if len(rot_indices) > 0 or len(mx_indices) > 0 or len(my_indices) > 0 or len(mz_indices) > 0:
+                # 不要なキーを連結する
                 # 変曲点があった場合、そこで区切る
                 indices = np.array(rot_indices)
                 indices = np.append(indices, mx_indices)
@@ -472,7 +520,9 @@ class VmdMotion():
                 # 変曲点で区切る
                 inflection = int(indices[0])
                 inflection_fno = start_fno + inflection
-                logger.debug("☆%s: 変曲点: %s, fno: %s, indices: %s", bone_name, inflection_fno, fno, indices)
+                logger.debug("☆%s: 変曲点: %s, start_fno: %s, fno: %s, indices: %s", bone_name, inflection_fno, start_fno, fno, indices)
+
+                next_bf = self.calc_bf(bone_name, inflection_fno)
 
                 if inflection > 0:
                     # 結合したベジェ曲線
@@ -486,16 +536,15 @@ class VmdMotion():
                                                                                       offset=offset, diff_limit=mov_diff_limit) if is_mov else (True, [])
 
                     if joined_rot_bzs and joined_mx_bzs and joined_my_bzs and joined_mz_bzs:
-                        next_bf = self.calc_bf(bone_name, inflection_fno)
                         # 結合できた場合、補間曲線をnextに設定
                         if is_rot:
-                            logger.debug("☆%s: fno: %s, 回転補間曲線成功: 1: %s, 2: %s", bone_name, inflection_fno, joined_rot_bzs[1].to_log(), joined_rot_bzs[2].to_log())
+                            logger.debug("☆%s: fno: %s, 変曲点:回転補間曲線成功: 1: %s, 2: %s", bone_name, inflection_fno, joined_rot_bzs[1].to_log(), joined_rot_bzs[2].to_log())
                             self.reset_interpolation_parts(bone_name, next_bf, joined_rot_bzs, MBezierUtils.R_x1_idxs, MBezierUtils.R_y1_idxs, MBezierUtils.R_x2_idxs, MBezierUtils.R_y2_idxs)
                         
                         if is_mov:
-                            logger.debug("☆%s: fno: %s, 移動X補間曲線成功: 1: %s, 2: %s", bone_name, inflection_fno, joined_mx_bzs[1].to_log(), joined_mx_bzs[2].to_log())
-                            logger.debug("☆%s: fno: %s, 移動Y補間曲線成功: 1: %s, 2: %s", bone_name, inflection_fno, joined_my_bzs[1].to_log(), joined_my_bzs[2].to_log())
-                            logger.debug("☆%s: fno: %s, 移動Z補間曲線成功: 1: %s, 2: %s", bone_name, inflection_fno, joined_mz_bzs[1].to_log(), joined_mz_bzs[2].to_log())
+                            logger.debug("☆%s: fno: %s, 変曲点:移動X補間曲線成功: 1: %s, 2: %s", bone_name, inflection_fno, joined_mx_bzs[1].to_log(), joined_mx_bzs[2].to_log())
+                            logger.debug("☆%s: fno: %s, 変曲点:移動Y補間曲線成功: 1: %s, 2: %s", bone_name, inflection_fno, joined_my_bzs[1].to_log(), joined_my_bzs[2].to_log())
+                            logger.debug("☆%s: fno: %s, 変曲点:移動Z補間曲線成功: 1: %s, 2: %s", bone_name, inflection_fno, joined_mz_bzs[1].to_log(), joined_mz_bzs[2].to_log())
                             self.reset_interpolation_parts(bone_name, next_bf, joined_mx_bzs, MBezierUtils.MX_x1_idxs, MBezierUtils.MX_y1_idxs, MBezierUtils.MX_x2_idxs, MBezierUtils.MX_y2_idxs)
                             self.reset_interpolation_parts(bone_name, next_bf, joined_my_bzs, MBezierUtils.MY_x1_idxs, MBezierUtils.MY_y1_idxs, MBezierUtils.MY_x2_idxs, MBezierUtils.MY_y2_idxs)
                             self.reset_interpolation_parts(bone_name, next_bf, joined_mz_bzs, MBezierUtils.MZ_x1_idxs, MBezierUtils.MZ_y1_idxs, MBezierUtils.MZ_x2_idxs, MBezierUtils.MZ_y2_idxs)
@@ -505,27 +554,42 @@ class VmdMotion():
                         for f in range(start_fno + 1, inflection_fno):
                             # 結合できた場合、区間内を削除
                             if f in self.bones[bone_name]:
+                                logger.debug("☆%s: fno: %s, 変曲点:キーフレ削除: %s", bone_name, inflection_fno, f)
                                 del self.bones[bone_name][f]
-                    else:
-                        # 結合できなかった場合、そこでキーを区切る
-                        logger.debug("★%s: fno: %s, 補間曲線失敗: rot_inflection: %s, mx_inflection: %s, my_inflection: %s, mz_inflection: %s", \
-                                     bone_name, inflection_fno, rot_inflection, mx_inflection, my_inflection, mz_inflection)
-                        # next_bf = self.calc_bf(bone_name, inflection_fno)
-                        # self.regist_bf(next_bf, bone_name, inflection_fno)
-                else:
-                    logger.debug("★補間曲線次へ")
-                    inflection_fno += 1
 
-                # 開始キーフレは、変曲点までずらす
-                start_fno = inflection_fno
-                # fnoを変曲点まで戻す（必ずインクリメントされるため）
-                fno = inflection_fno
+                        # 開始キーフレは、変曲点までずらす
+                        start_fno = inflection_fno
+                        # fnoを変曲点まで戻す
+                        fno = inflection_fno
+                    else:
+                        # 結合できなかった場合、スルー
+                        logger.debug("★%s: fno: %s, 変曲点:補間曲線失敗: rot_inflection: %s, mx_inflection: %s, my_inflection: %s, mz_inflection: %s", \
+                                     bone_name, inflection_fno, rot_inflection, mx_inflection, my_inflection, mz_inflection)
+
+                        # 開始キーフレを現在の処理キーフレにまで進める
+                        start_fno = fno - 1
+                        fno = start_fno
+
+                    # 配列初期化
+                    rot_values = []
+                    mx_values = []
+                    my_values = []
+                    mz_values = []
+                    key_cnt = 0
+            else:
+                # キーの結合に失敗して、かつ変曲点がない場合、配列を初期化して移動する
+
+                # 開始キーフレを現在の処理キーフレにまで進める
+                start_fno = fno - 1
+                fno = start_fno
+
                 # 配列初期化
                 rot_values = []
                 mx_values = []
                 my_values = []
                 mz_values = []
-            
+                key_cnt = 0
+
             if fno // 100 > prev_sep_fno:
                 if data_set_no == 0:
                     logger.info("-- %sフレーム目:終了(%s％)【不要キー削除 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
@@ -534,7 +598,7 @@ class VmdMotion():
 
                 prev_sep_fno = fno // 100
 
-            # 次へ進む
+            # 必ず進める
             fno += 1
         
         logger.debug("len: %s, last: %s", len(rot_values), fnos[-1])

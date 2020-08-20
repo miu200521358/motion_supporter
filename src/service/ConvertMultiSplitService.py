@@ -80,13 +80,8 @@ class ConvertMultiSplitService():
         motion = self.options.motion
         model = self.options.model
 
-        # # 事前に細分化
-        # self.prepare_split_stance(motion, bone_name)
-        # logger.info("-- 分離準備【%s】", bone_name)
-
         # 事前に変化量全打ち(移動はあるキーだけ計測)
-        # fnos = motion.get_differ_fnos(0, [bone_name], limit_degrees=30, limit_length=-1)
-        fnos = motion.get_bone_fnos(bone_name)
+        fnos = motion.get_differ_fnos(0, [bone_name], limit_degrees=20, limit_length=-1)
 
         if len(fnos) == 0:
             return
@@ -212,10 +207,6 @@ class ConvertMultiSplitService():
     # 不要キー削除
     def remove_unnecessary_bf(self, bone_name: str):
         try:
-            # # 念のため細分化
-            # self.prepare_split_stance(self.options.motion, bone_name)
-            # logger.info("-- 分離準備【%s】", bone_name)
-
             self.options.motion.remove_unnecessary_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
                                                       self.options.model.bones[bone_name].getTranslatable())
 
