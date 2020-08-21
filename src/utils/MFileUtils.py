@@ -26,21 +26,22 @@ def resource_path(relative):
 def read_history(mydir_path):
     # ファイル履歴
     file_hitories = {"parent_vmd": [], "parent_pmx": [], "noise_vmd": [], "multi_split_vmd": [], "multi_split_pmx": [], \
-                     "multi_join_vmd": [], "multi_join_pmx": [], "ik2fk_vmd": [], "ik2fk_pmx": [], "max": 50}
+                     "multi_join_vmd": [], "multi_join_pmx": [], "leg_fk2ik_vmd": [], "leg_fk2ik_pmx": [], "arm_ik2fk_vmd": [], "arm_ik2fk_pmx": [], "max": 50}
 
     # 履歴JSONファイルがあれば読み込み
     try:
         with open(os.path.join(mydir_path, 'history.json'), 'r') as f:
             file_hitories = json.load(f)
             # キーが揃っているかチェック
-            for key in ["parent_vmd", "parent_pmx", "noise_vmd", "multi_split_vmd", "multi_split_pmx", "multi_join_vmd", "multi_join_pmx", "ik2fk_vmd", "ik2fk_pmx"]:
+            for key in ["parent_vmd", "parent_pmx", "noise_vmd", "multi_split_vmd", "multi_split_pmx", "multi_join_vmd", "multi_join_pmx", \
+                        "leg_fk2ik_vmd", "leg_fk2ik_pmx", "arm_ik2fk_vmd", "arm_ik2fk_pmx"]:
                 if key not in file_hitories:
                     file_hitories[key] = []
             # 最大件数は常に上書き
             file_hitories["max"] = 50
     except Exception:
         file_hitories = {"parent_vmd": [], "parent_pmx": [], "noise_vmd": [], "multi_split_vmd": [], "multi_split_pmx": [], \
-                         "multi_join_vmd": [], "multi_join_pmx": [], "ik2fk_vmd": [], "ik2fk_pmx": [], "max": 50}
+                         "multi_join_vmd": [], "multi_join_pmx": [], "leg_fk2ik_vmd": [], "leg_fk2ik_pmx": [], "arm_ik2fk_vmd": [], "arm_ik2fk_pmx": [], "max": 50}
 
     return file_hitories
 
@@ -191,28 +192,28 @@ def is_auto_noise_vmd_output_path(output_noise_vmd_path: str, motion_noise_vmd_d
 # IK焼き込みVMD出力ファイルパス生成
 # base_file_path: モーションVMDパス
 # pmx_path: 変換先モデルPMXパス
-# output_ik2fk_vmd_path: 出力ファイルパス
-def get_output_ik2fk_vmd_path(base_file_path: str, pmx_path: str, output_ik2fk_vmd_path: str, is_force=False):
+# output_arm_ik2fk_vmd_path: 出力ファイルパス
+def get_output_arm_ik2fk_vmd_path(base_file_path: str, pmx_path: str, output_arm_ik2fk_vmd_path: str, is_force=False):
     # モーションVMDパスの拡張子リスト
     if not os.path.exists(base_file_path) or not os.path.exists(pmx_path):
         return ""
 
     # モーションVMDディレクトリパス
-    motion_ik2fk_vmd_dir_path = get_dir_path(base_file_path)
+    motion_arm_ik2fk_vmd_dir_path = get_dir_path(base_file_path)
     # モーションVMDファイル名・拡張子
-    motion_ik2fk_vmd_file_name, motion_ik2fk_vmd_ext = os.path.splitext(os.path.basename(base_file_path))
+    motion_arm_ik2fk_vmd_file_name, motion_arm_ik2fk_vmd_ext = os.path.splitext(os.path.basename(base_file_path))
     # 変換先モデルファイル名・拡張子
     rep_pmx_file_name, _ = os.path.splitext(os.path.basename(pmx_path))
 
     # 出力ファイルパス生成
-    new_output_ik2fk_vmd_path = os.path.join(motion_ik2fk_vmd_dir_path, "{0}_{1}_{2:%Y%m%d_%H%M%S}{3}".format(motion_ik2fk_vmd_file_name, rep_pmx_file_name, datetime.now(), ".vmd"))
+    new_output_arm_ik2fk_vmd_path = os.path.join(motion_arm_ik2fk_vmd_dir_path, "{0}_{1}_{2:%Y%m%d_%H%M%S}{3}".format(motion_arm_ik2fk_vmd_file_name, rep_pmx_file_name, datetime.now(), ".vmd"))
 
     # ファイルパス自体が変更されたか、自動生成ルールに則っている場合、ファイルパス変更
-    if is_force or is_auto_ik2fk_vmd_output_path(output_ik2fk_vmd_path, motion_ik2fk_vmd_dir_path, motion_ik2fk_vmd_file_name, ".vmd", rep_pmx_file_name):
+    if is_force or is_auto_arm_ik2fk_vmd_output_path(output_arm_ik2fk_vmd_path, motion_arm_ik2fk_vmd_dir_path, motion_arm_ik2fk_vmd_file_name, ".vmd", rep_pmx_file_name):
 
         try:
-            open(new_output_ik2fk_vmd_path, 'w')
-            os.remove(new_output_ik2fk_vmd_path)
+            open(new_output_arm_ik2fk_vmd_path, 'w')
+            os.remove(new_output_arm_ik2fk_vmd_path)
         except Exception:
             logger.warning("出力ファイルパスの生成に失敗しました。以下の原因が考えられます。\n" \
                            + "・ファイルパスが255文字を超えている\n" \
@@ -220,27 +221,27 @@ def get_output_ik2fk_vmd_path(base_file_path: str, pmx_path: str, output_ik2fk_v
                            + "・出力ファイルパスの親フォルダに書き込み権限がない" \
                            + "・出力ファイルパスに書き込み権限がない")
 
-        return new_output_ik2fk_vmd_path
+        return new_output_arm_ik2fk_vmd_path
 
-    return output_ik2fk_vmd_path
+    return output_arm_ik2fk_vmd_path
 
 
 # 自動生成ルールに則ったパスか
-def is_auto_ik2fk_vmd_output_path(output_ik2fk_vmd_path: str, motion_ik2fk_vmd_dir_path: str, motion_ik2fk_vmd_file_name: str, motion_ik2fk_vmd_ext: str, rep_pmx_file_name: str):
-    if not output_ik2fk_vmd_path:
+def is_auto_arm_ik2fk_vmd_output_path(output_arm_ik2fk_vmd_path: str, motion_arm_ik2fk_vmd_dir_path: str, motion_arm_ik2fk_vmd_file_name: str, motion_arm_ik2fk_vmd_ext: str, rep_pmx_file_name: str):
+    if not output_arm_ik2fk_vmd_path:
         # 出力パスがない場合、置き換え対象
         return True
 
     # 新しく設定しようとしている出力ファイルパスの正規表現
-    escaped_motion_ik2fk_vmd_file_name = escape_filepath(os.path.join(motion_ik2fk_vmd_dir_path, motion_ik2fk_vmd_file_name))
+    escaped_motion_arm_ik2fk_vmd_file_name = escape_filepath(os.path.join(motion_arm_ik2fk_vmd_dir_path, motion_arm_ik2fk_vmd_file_name))
     escaped_rep_pmx_file_name = escape_filepath(rep_pmx_file_name)
-    escaped_motion_ik2fk_vmd_ext = escape_filepath(motion_ik2fk_vmd_ext)
+    escaped_motion_arm_ik2fk_vmd_ext = escape_filepath(motion_arm_ik2fk_vmd_ext)
 
-    new_output_ik2fk_vmd_pattern = re.compile(r'^%s_%s%s%s$' % (escaped_motion_ik2fk_vmd_file_name, \
-                                              escaped_rep_pmx_file_name, r"_?\w*_L\d+_\d{8}_\d{6}", escaped_motion_ik2fk_vmd_ext))
+    new_output_arm_ik2fk_vmd_pattern = re.compile(r'^%s_%s%s%s$' % (escaped_motion_arm_ik2fk_vmd_file_name, \
+                                              escaped_rep_pmx_file_name, r"_?\w*_L\d+_\d{8}_\d{6}", escaped_motion_arm_ik2fk_vmd_ext))
     
     # 自動生成ルールに則ったファイルパスである場合、合致あり
-    return re.match(new_output_ik2fk_vmd_pattern, output_ik2fk_vmd_path) is not None
+    return re.match(new_output_arm_ik2fk_vmd_pattern, output_arm_ik2fk_vmd_path) is not None
     
 
 def get_output_multi_split_vmd_path(base_file_path: str, pmx_path: str, output_multi_split_vmd_path: str, is_force=False):
@@ -277,7 +278,8 @@ def get_output_multi_split_vmd_path(base_file_path: str, pmx_path: str, output_m
 
 
 # 自動生成ルールに則ったパスか
-def is_auto_multi_split_vmd_output_path(output_multi_split_vmd_path: str, motion_multi_split_vmd_dir_path: str, motion_multi_split_vmd_file_name: str, motion_multi_split_vmd_ext: str, rep_pmx_file_name: str):
+def is_auto_multi_split_vmd_output_path(output_multi_split_vmd_path: str, motion_multi_split_vmd_dir_path: str, motion_multi_split_vmd_file_name: str, \
+                                        motion_multi_split_vmd_ext: str, rep_pmx_file_name: str):
     if not output_multi_split_vmd_path:
         # 出力パスがない場合、置き換え対象
         return True
@@ -352,7 +354,8 @@ def get_output_multi_join_vmd_path(base_file_path: str, pmx_path: str, output_mu
 
 
 # 自動生成ルールに則ったパスか
-def is_auto_multi_join_vmd_output_path(output_multi_join_vmd_path: str, motion_multi_join_vmd_dir_path: str, motion_multi_join_vmd_file_name: str, motion_multi_join_vmd_ext: str, rep_pmx_file_name: str):
+def is_auto_multi_join_vmd_output_path(output_multi_join_vmd_path: str, motion_multi_join_vmd_dir_path: str, \
+                                       motion_multi_join_vmd_file_name: str, motion_multi_join_vmd_ext: str, rep_pmx_file_name: str):
     if not output_multi_join_vmd_path:
         # 出力パスがない場合、置き換え対象
         return True
@@ -391,7 +394,62 @@ def get_output_join_bone_path(base_file_path: str, pmx_path: str):
     new_output_bone_path = os.path.join(motion_vmd_dir_path, "{0}_{1}{2}".format(motion_vmd_file_name, pmx_file_name, ".csv"))
 
     return new_output_bone_path
+    
 
+# 全親移植VMD出力ファイルパス生成
+# base_file_path: モーションVMDパス
+# pmx_path: 変換先モデルPMXパス
+# output_leg_fk2ik_vmd_path: 出力ファイルパス
+def get_output_leg_fk2ik_vmd_path(base_file_path: str, pmx_path: str, output_leg_fk2ik_vmd_path: str, is_force=False):
+    # モーションVMDパスの拡張子リスト
+    if not os.path.exists(base_file_path) or not os.path.exists(pmx_path):
+        return ""
+
+    # モーションVMDディレクトリパス
+    motion_leg_fk2ik_vmd_dir_path = get_dir_path(base_file_path)
+    # モーションVMDファイル名・拡張子
+    motion_leg_fk2ik_vmd_file_name, motion_leg_fk2ik_vmd_ext = os.path.splitext(os.path.basename(base_file_path))
+    # 変換先モデルファイル名・拡張子
+    rep_pmx_file_name, _ = os.path.splitext(os.path.basename(pmx_path))
+
+    # 出力ファイルパス生成
+    new_output_leg_fk2ik_vmd_path = os.path.join(motion_leg_fk2ik_vmd_dir_path, "{0}_{1}L_{2:%Y%m%d_%H%M%S}{3}".format(motion_leg_fk2ik_vmd_file_name, rep_pmx_file_name, datetime.now(), ".vmd"))
+
+    # ファイルパス自体が変更されたか、自動生成ルールに則っている場合、ファイルパス変更
+    if is_force or is_auto_leg_fk2ik_vmd_output_path(output_leg_fk2ik_vmd_path, motion_leg_fk2ik_vmd_dir_path, motion_leg_fk2ik_vmd_file_name, ".vmd", rep_pmx_file_name):
+
+        try:
+            open(new_output_leg_fk2ik_vmd_path, 'w')
+            os.remove(new_output_leg_fk2ik_vmd_path)
+        except Exception:
+            logger.warning("出力ファイルパスの生成に失敗しました。以下の原因が考えられます。\n" \
+                           + "・ファイルパスが255文字を超えている\n" \
+                           + "・ファイルパスに使えない文字列が含まれている（例) \\　/　:　*　?　\"　<　>　|）" \
+                           + "・出力ファイルパスの親フォルダに書き込み権限がない" \
+                           + "・出力ファイルパスに書き込み権限がない")
+
+        return new_output_leg_fk2ik_vmd_path
+
+    return output_leg_fk2ik_vmd_path
+
+
+# 自動生成ルールに則ったパスか
+def is_auto_leg_fk2ik_vmd_output_path(output_leg_fk2ik_vmd_path: str, motion_leg_fk2ik_vmd_dir_path: str, motion_leg_fk2ik_vmd_file_name: str, motion_leg_fk2ik_vmd_ext: str, rep_pmx_file_name: str):
+    if not output_leg_fk2ik_vmd_path:
+        # 出力パスがない場合、置き換え対象
+        return True
+
+    # 新しく設定しようとしている出力ファイルパスの正規表現
+    escaped_motion_leg_fk2ik_vmd_file_name = escape_filepath(os.path.join(motion_leg_fk2ik_vmd_dir_path, motion_leg_fk2ik_vmd_file_name))
+    escaped_rep_pmx_file_name = escape_filepath(rep_pmx_file_name)
+    escaped_motion_leg_fk2ik_vmd_ext = escape_filepath(motion_leg_fk2ik_vmd_ext)
+
+    new_output_leg_fk2ik_vmd_pattern = re.compile(r'^%s_%s%s%s$' % (escaped_motion_leg_fk2ik_vmd_file_name, \
+                                                  escaped_rep_pmx_file_name, r"L_\d{8}_\d{6}", escaped_motion_leg_fk2ik_vmd_ext))
+    
+    # 自動生成ルールに則ったファイルパスである場合、合致あり
+    return re.match(new_output_leg_fk2ik_vmd_pattern, output_leg_fk2ik_vmd_path) is not None
+    
 
 def escape_filepath(path: str):
     path = path.replace("\\", "\\\\")

@@ -64,7 +64,7 @@ class MultiSplitPanel(BasePanel):
         self.setting_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
         # ボーン名指定
-        self.bone_target_txt_ctrl = wx.TextCtrl(self, wx.ID_ANY, "", wx.DefaultPosition, (450, 60), wx.HSCROLL | wx.VSCROLL | wx.TE_MULTILINE | wx.TE_READONLY)
+        self.bone_target_txt_ctrl = wx.TextCtrl(self, wx.ID_ANY, "", wx.DefaultPosition, (450, 50), wx.HSCROLL | wx.VSCROLL | wx.TE_MULTILINE | wx.TE_READONLY)
         self.bone_target_txt_ctrl.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DLIGHT))
         self.setting_sizer.Add(self.bone_target_txt_ctrl, 1, wx.EXPAND | wx.ALL, 5)
 
@@ -73,10 +73,14 @@ class MultiSplitPanel(BasePanel):
         self.bone_target_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_click_bone_target)
         self.setting_sizer.Add(self.bone_target_btn_ctrl, 0, wx.ALIGN_BOTTOM | wx.ALL, 5)
 
-        self.static_line03 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
-        self.setting_sizer.Add(self.static_line03, 0, wx.EXPAND | wx.ALL, 5)
-
         self.sizer.Add(self.setting_sizer, 0, wx.EXPAND | wx.ALL, 5)
+
+        # 不要キー削除処理
+        self.flg_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.remove_unnecessary_flg_ctrl = wx.CheckBox(self, wx.ID_ANY, u"不要キー削除処理を実行する", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.remove_unnecessary_flg_ctrl.SetToolTip(u"チェックを入れると、不要キー削除処理を実行します。キーが減る分、キー間が少しズレる事があります。")
+        self.flg_sizer.Add(self.remove_unnecessary_flg_ctrl, 0, wx.ALL, 5)
+        self.sizer.Add(self.flg_sizer, 0, wx.EXPAND | wx.ALL, 5)
 
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -113,8 +117,8 @@ class MultiSplitPanel(BasePanel):
     def on_click_bone_target(self, event: wx.Event):
         self.disable()
 
-        # VMD読み込み
         sys.stdout = self.console_ctrl
+        # VMD読み込み
         self.vmd_file_ctrl.load()
         # PMX読み込み
         self.model_file_ctrl.load()
@@ -152,7 +156,7 @@ class MultiSplitPanel(BasePanel):
 
     # ファイル変更時の処理
     def on_change_file(self, event: wx.Event):
-        self.set_output_vmd_path(event)
+        self.set_output_vmd_path(event, is_force=True)
     
     def set_output_vmd_path(self, event: wx.Event, is_force=False):
         output_multi_split_vmd_path = MFileUtils.get_output_multi_split_vmd_path(

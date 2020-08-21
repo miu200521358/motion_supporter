@@ -9,17 +9,17 @@ from form.panel.BasePanel import BasePanel
 from form.parts.BaseFilePickerCtrl import BaseFilePickerCtrl
 from form.parts.HistoryFilePickerCtrl import HistoryFilePickerCtrl
 from form.parts.ConsoleCtrl import ConsoleCtrl
-from form.worker.IKtoFKWorkerThread import IKtoFKWorkerThread
+from form.worker.ArmIKtoFKWorkerThread import ArmIKtoFKWorkerThread
 from utils import MFormUtils, MFileUtils
 from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__)
 
 # イベント定義
-(IKtoFKThreadEvent, EVT_SMOOTH_THREAD) = wx.lib.newevent.NewEvent()
+(ArmIKtoFKThreadEvent, EVT_SMOOTH_THREAD) = wx.lib.newevent.NewEvent()
 
 
-class IKtoFKPanel(BasePanel):
+class ArmIKtoFKPanel(BasePanel):
         
     def __init__(self, frame: wx.Frame, ik2fk: wx.Notebook, tab_idx: int):
         super().__init__(frame, ik2fk, tab_idx)
@@ -58,7 +58,7 @@ class IKtoFKPanel(BasePanel):
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
         # 実行ボタン
-        self.ik2fk_btn_ctrl = wx.Button(self, wx.ID_ANY, u"IKtoFK", wx.DefaultPosition, wx.Size(200, 50), 0)
+        self.ik2fk_btn_ctrl = wx.Button(self, wx.ID_ANY, u"ArmIKtoFK", wx.DefaultPosition, wx.Size(200, 50), 0)
         self.ik2fk_btn_ctrl.SetToolTip(u"IKをFKに焼き込みます")
         self.ik2fk_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_convert_ik2fk)
         btn_sizer.Add(self.ik2fk_btn_ctrl, 0, wx.ALL, 5)
@@ -154,7 +154,7 @@ class IKtoFKPanel(BasePanel):
             logger.error("まだ処理が実行中です。終了してから再度実行してください。", decoration=MLogger.DECORATION_BOX)
         else:
             # 別スレッドで実行
-            self.convert_ik2fk_worker = IKtoFKWorkerThread(self.frame, IKtoFKThreadEvent, self.frame.is_out_log, self.frame.is_saving)
+            self.convert_ik2fk_worker = ArmIKtoFKWorkerThread(self.frame, ArmIKtoFKThreadEvent, self.frame.is_out_log, self.frame.is_saving)
             self.convert_ik2fk_worker.start()
 
         return result

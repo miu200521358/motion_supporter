@@ -8,7 +8,8 @@ from form.panel.ParentPanel import ParentPanel
 from form.panel.NoisePanel import NoisePanel
 from form.panel.MultiSplitPanel import MultiSplitPanel
 from form.panel.MultiJoinPanel import MultiJoinPanel
-from form.panel.IKtoFKPanel import IKtoFKPanel
+from form.panel.ArmIKtoFKPanel import ArmIKtoFKPanel
+from form.panel.LegFKtoIKPanel import LegFKtoIKPanel
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from utils import MFormUtils, MFileUtils # noqa
 from utils.MLogger import MLogger # noqa
@@ -87,9 +88,13 @@ class MainFrame(wx.Frame):
         self.multi_join_panel_ctrl = MultiJoinPanel(self, self.note_ctrl, 9)
         self.note_ctrl.AddPage(self.multi_join_panel_ctrl, u"多段統合", False)
         
-        # # IKtoFKタブ
-        # self.ik2fk_panel_ctrl = IKtoFKPanel(self, self.note_ctrl, 9)
-        # self.note_ctrl.AddPage(self.ik2fk_panel_ctrl, u"IKtoFK", False)
+        # 足FK2FKタブ
+        self.leg_fk2ik_panel_ctrl = LegFKtoIKPanel(self, self.note_ctrl, 9)
+        self.note_ctrl.AddPage(self.leg_fk2ik_panel_ctrl, u"足FKtoIK", False)
+        
+        # # 腕IKtoFKタブ
+        # self.arm_ik2fk_panel_ctrl = ArmIKtoFKPanel(self, self.note_ctrl, 9)
+        # self.note_ctrl.AddPage(self.arm_ik2fk_panel_ctrl, u"腕IKtoFK", False)
         
         # ---------------------------------------------
 

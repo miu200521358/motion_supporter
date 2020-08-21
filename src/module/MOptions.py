@@ -35,13 +35,14 @@ class MOptionsDataSet():
 
 class MParentOptions():
 
-    def __init__(self, version_name, logging_level, max_workers, motion, model, output_path, center_rotatation_flg, monitor, is_file, outout_datetime):
+    def __init__(self, version_name, logging_level, max_workers, motion, model, output_path, center_rotatation_flg, remove_unnecessary_flg, monitor, is_file, outout_datetime):
         self.version_name = version_name
         self.logging_level = logging_level
         self.motion = motion
         self.model = model
         self.output_path = output_path
         self.center_rotatation_flg = center_rotatation_flg
+        self.remove_unnecessary_flg = remove_unnecessary_flg
         self.monitor = monitor
         self.is_file = is_file
         self.outout_datetime = outout_datetime
@@ -66,7 +67,7 @@ class MNoiseOptions():
         self.max_workers = max_workers
 
 
-class MIKtoFKOptions():
+class MArmIKtoFKOptions():
 
     def __init__(self, version_name, logging_level, max_workers, motion, model, output_path, monitor, is_file, outout_datetime):
         self.version_name = version_name
@@ -82,13 +83,14 @@ class MIKtoFKOptions():
 
 class MMultiSplitOptions():
 
-    def __init__(self, version_name, logging_level, max_workers, motion, model, target_bones, output_path, monitor, is_file, outout_datetime):
+    def __init__(self, version_name, logging_level, max_workers, motion, model, target_bones, output_path, remove_unnecessary_flg, monitor, is_file, outout_datetime):
         self.version_name = version_name
         self.logging_level = logging_level
         self.motion = motion
         self.model = model
         self.target_bones = target_bones
         self.output_path = output_path
+        self.remove_unnecessary_flg = remove_unnecessary_flg
         self.monitor = monitor
         self.is_file = is_file
         self.outout_datetime = outout_datetime
@@ -97,16 +99,33 @@ class MMultiSplitOptions():
 
 class MMultiJoinOptions():
 
-    def __init__(self, version_name, logging_level, max_workers, motion, model, target_bones, output_path, monitor, is_file, outout_datetime):
+    def __init__(self, version_name, logging_level, max_workers, motion, model, target_bones, output_path, remove_unnecessary_flg, monitor, is_file, outout_datetime):
         self.version_name = version_name
         self.logging_level = logging_level
         self.motion = motion
         self.model = model
         self.target_bones = target_bones
         self.output_path = output_path
+        self.remove_unnecessary_flg = remove_unnecessary_flg
         self.monitor = monitor
         self.is_file = is_file
         self.outout_datetime = outout_datetime
         self.max_workers = max_workers
+
+
+class MLegFKtoIKOptions():
+
+    def __init__(self, version_name, logging_level, max_workers, motion, model, output_path, remove_unnecessary_flg, monitor, is_file, outout_datetime):
+        self.version_name = version_name
+        self.logging_level = logging_level
+        self.motion = motion
+        self.model = model
+        self.output_path = output_path
+        self.remove_unnecessary_flg = remove_unnecessary_flg
+        self.monitor = monitor
+        self.is_file = is_file
+        self.outout_datetime = outout_datetime
+        self.max_workers = max_workers
+
 
 

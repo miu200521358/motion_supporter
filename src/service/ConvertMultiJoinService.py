@@ -32,6 +32,8 @@ class ConvertMultiJoinService():
                                     vmd=os.path.basename(self.options.motion.path)) # noqa
             service_data_txt = "{service_data_txt}　モデル: {model}({model_name})\n".format(service_data_txt=service_data_txt,
                                     model=os.path.basename(self.options.motion.path), model_name=self.options.model.name) # noqa
+            service_data_txt = "{service_data_txt}　不要キー削除: {center_rotation}\n".format(service_data_txt=service_data_txt,
+                                    center_rotation=self.options.remove_unnecessary_flg) # noqa
 
             selections = ["{0} ← 回転X: {1}, 回転Y: {2}, 回転Z: {3}, 移動X: {4}, 移動Y: {5}, 移動Z: {6}" \
                           .format(bset[0], bset[1], bset[2], bset[3], bset[4], bset[5], bset[6]) for bset in self.options.target_bones]
@@ -129,8 +131,9 @@ class ConvertMultiJoinService():
             del motion.bones[rmzbn]
 
         # 不要キー削除
-        self.options.motion.remove_unnecessary_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
-                                                  self.options.model.bones[bone_name].getTranslatable(), rot_diff_limit=0.001, mov_diff_limit=0.01)
+        if self.options.remove_unnecessary_flg:
+            self.options.motion.remove_unnecessary_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
+                                                      self.options.model.bones[bone_name].getTranslatable())
         
         return True
 

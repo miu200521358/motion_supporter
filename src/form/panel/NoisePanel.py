@@ -112,7 +112,7 @@ class NoisePanel(BasePanel):
 
     # ファイル変更時の処理
     def on_change_file(self, event: wx.Event):
-        self.set_output_vmd_path(event)
+        self.set_output_vmd_path(event, is_force=True)
     
     def set_output_vmd_path(self, event, is_force=False):
         output_noise_vmd_path = MFileUtils.get_output_noise_vmd_path(

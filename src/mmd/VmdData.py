@@ -149,6 +149,7 @@ class VmdShadowFrame():
 # VmdShowIkFrame のikの中の要素
 class VmdInfoIk():
     def __init__(self, name='', onoff=0):
+        self.bname = ''
         self.name = name
         self.onoff = onoff
 
@@ -165,8 +166,9 @@ class VmdShowIkFrame():
         fout.write(struct.pack('b', self.show))
         fout.write(struct.pack('<L', len(self.ik)))
         for k in (self.ik):
-            fout.write(k.name)
-            fout.write(bytearray([0 for i in range(len(k.name), 20)]))  # IKボーン名20Byteの残りを\0で埋める
+            if not k.bname:
+                k.bname = k.name.encode('cp932').decode('shift_jis').encode('shift_jis')[:20].ljust(20, b'\x00')   # 20文字制限
+            fout.write(k.bname)
             fout.write(struct.pack('b', k.onoff))
         
 
@@ -379,7 +381,7 @@ class VmdMotion():
     # 変曲点を求める
     # https://teratail.com/questions/162391
     def remove_unnecessary_bf(self, data_set_no: int, bone_name: str, is_rot: bool, is_mov: bool, \
-                              offset=0, rot_diff_limit=0.01, mov_diff_limit=0.1, start_fno=-1, end_fno=-1, is_show_log=True, is_force=False):
+                              offset=0, rot_diff_limit=0.001, mov_diff_limit=0.01, start_fno=-1, end_fno=-1, is_show_log=True, is_force=False):
         prev_sep_fno = 0
 
         # キーフレを取得する

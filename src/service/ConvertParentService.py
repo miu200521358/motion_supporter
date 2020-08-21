@@ -34,6 +34,8 @@ class ConvertParentService():
                                     model=os.path.basename(self.options.motion.path), model_name=self.options.model.name) # noqa
             service_data_txt = "{service_data_txt}　センター回転移植: {center_rotation}\n".format(service_data_txt=service_data_txt,
                                     center_rotation=self.options.center_rotatation_flg) # noqa
+            service_data_txt = "{service_data_txt}　不要キー削除: {center_rotation}\n".format(service_data_txt=service_data_txt,
+                                    center_rotation=self.options.remove_unnecessary_flg) # noqa
 
             logger.info(service_data_txt, decoration=MLogger.DECORATION_BOX)
 
@@ -204,17 +206,18 @@ class ConvertParentService():
                     logger.info("-- %sフレーム目:終了(%s％)【移植 - %s】", fno, round((fno / fnos[-1]) * 100, 3), "上半身・下半身")
                     prev_sep_fno = fno // 1000
 
-        futures = []
+        if self.options.remove_unnecessary_flg:
+            futures = []
 
-        with ThreadPoolExecutor(thread_name_prefix="remove", max_workers=min(5, self.options.max_workers)) as executor:
-            for bone_name in [center_bone_name, upper_bone_name, lower_bone_name, right_leg_ik_bone_name, left_leg_ik_bone_name]:
-                futures.append(executor.submit(self.remove_unnecessary_bf, bone_name))
+            with ThreadPoolExecutor(thread_name_prefix="remove", max_workers=min(5, self.options.max_workers)) as executor:
+                for bone_name in [center_bone_name, upper_bone_name, lower_bone_name, right_leg_ik_bone_name, left_leg_ik_bone_name]:
+                    futures.append(executor.submit(self.remove_unnecessary_bf, bone_name))
 
-        concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
+            concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
-        for f in futures:
-            if not f.result():
-                return False
+            for f in futures:
+                if not f.result():
+                    return False
         
         return True
 

@@ -8,14 +8,14 @@ import wx
 import time
 import gc
 from form.worker.BaseWorkerThread import BaseWorkerThread, task_takes_time
-from service.ConvertIKtoFKService import ConvertIKtoFKService
-from module.MOptions import MIKtoFKOptions
+from service.ConvertArmIKtoFKService import ConvertArmIKtoFKService
+from module.MOptions import MArmIKtoFKOptions
 from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__)
 
 
-class IKtoFKWorkerThread(BaseWorkerThread):
+class ArmIKtoFKWorkerThread(BaseWorkerThread):
 
     def __init__(self, frame: wx.Frame, result_event: wx.Event, is_out_log: bool, is_exec_saving: bool):
         self.elapsed_time = 0
@@ -37,7 +37,7 @@ class IKtoFKWorkerThread(BaseWorkerThread):
             self.result = self.frame.ik2fk_panel_ctrl.ik2fk_model_file_ctrl.load(is_check=False) and self.result
 
             if self.result:
-                self.options = MIKtoFKOptions(\
+                self.options = MArmIKtoFKOptions(\
                     version_name=self.frame.version_name, \
                     logging_level=self.frame.logging_level, \
                     motion=self.frame.ik2fk_panel_ctrl.ik2fk_vmd_file_ctrl.data, \
@@ -48,7 +48,7 @@ class IKtoFKWorkerThread(BaseWorkerThread):
                     outout_datetime=logger.outout_datetime, \
                     max_workers=(1 if self.is_exec_saving else min(32, os.cpu_count() + 4)))
                 
-                self.result = ConvertIKtoFKService(self.options).execute() and self.result
+                self.result = ConvertArmIKtoFKService(self.options).execute() and self.result
 
             self.elapsed_time = time.time() - start
         finally:

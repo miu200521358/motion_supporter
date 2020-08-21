@@ -32,6 +32,8 @@ class ConvertMultiSplitService():
                                     vmd=os.path.basename(self.options.motion.path)) # noqa
             service_data_txt = "{service_data_txt}　モデル: {model}({model_name})\n".format(service_data_txt=service_data_txt,
                                     model=os.path.basename(self.options.motion.path), model_name=self.options.model.name) # noqa
+            service_data_txt = "{service_data_txt}　不要キー削除: {center_rotation}\n".format(service_data_txt=service_data_txt,
+                                    center_rotation=self.options.remove_unnecessary_flg) # noqa
 
             selections = ["{0} → 回転X: {1}, 回転Y: {2}, 回転Z: {3}, 移動X: {4}, 移動Y: {5}, 移動Z: {6}" \
                           .format(bset[0], bset[1], bset[2], bset[3], bset[4], bset[5], bset[6]) for bset in self.options.target_bones]
@@ -80,14 +82,17 @@ class ConvertMultiSplitService():
         motion = self.options.motion
         model = self.options.model
 
-        # 事前に変化量全打ち(移動はあるキーだけ計測)
-        fnos = motion.get_differ_fnos(0, [bone_name], limit_degrees=20, limit_length=-1)
+        # 事前に変化量全打ち
+        fnos = motion.get_differ_fnos(0, [bone_name], limit_degrees=10, limit_length=0.5)
+
+        # # 事前に分離全打ち
+        # fnos = motion.get_bone_fnos(bone_name)
 
         if len(fnos) == 0:
             return
 
         prev_sep_fno = 0
-        for fno in fnos:
+        for fno in range(fnos[-1] + 1):
             # 一度そのままキーを登録
             motion.regist_bf(motion.calc_bf(bone_name, fno), bone_name, fno)
             # 補間曲線のため、もう一度取得しなおし
@@ -129,7 +134,7 @@ class ConvertMultiSplitService():
         local_x_axis = model.get_local_x_axis(bone_name)
 
         prev_sep_fno = 0
-        for fno in fnos:
+        for fno in range(fnos[-1] + 1):
             bf = motion.calc_bf(bone_name, fno)
 
             if model.bones[bone_name].getRotatable():
@@ -178,31 +183,32 @@ class ConvertMultiSplitService():
         if rrxbn != bone_name and rrybn != bone_name and rrzbn != bone_name and rmxbn != bone_name and rmybn != bone_name and rmzbn != bone_name:
             del motion.bones[bone_name]
 
-        # 不要キー削除
-        futures = []
-        with ThreadPoolExecutor(thread_name_prefix="remove", max_workers=min(6, self.options.max_workers)) as executor:
-            if model.bones[bone_name].getRotatable():
-                if len(rrxbn) > 0:
-                    futures.append(executor.submit(self.remove_unnecessary_bf, rrxbn))
-                if len(rrybn) > 0:
-                    futures.append(executor.submit(self.remove_unnecessary_bf, rrybn))
-                if len(rrzbn) > 0:
-                    futures.append(executor.submit(self.remove_unnecessary_bf, rrzbn))
+        if self.options.remove_unnecessary_flg:
+            # 不要キー削除
+            futures = []
+            with ThreadPoolExecutor(thread_name_prefix="remove", max_workers=min(6, self.options.max_workers)) as executor:
+                if model.bones[bone_name].getRotatable():
+                    if len(rrxbn) > 0:
+                        futures.append(executor.submit(self.remove_unnecessary_bf, rrxbn))
+                    if len(rrybn) > 0:
+                        futures.append(executor.submit(self.remove_unnecessary_bf, rrybn))
+                    if len(rrzbn) > 0:
+                        futures.append(executor.submit(self.remove_unnecessary_bf, rrzbn))
 
-            if model.bones[bone_name].getTranslatable():
-                if len(rmxbn) > 0:
-                    futures.append(executor.submit(self.remove_unnecessary_bf, rmxbn))
-                if len(rmybn) > 0:
-                    futures.append(executor.submit(self.remove_unnecessary_bf, rmybn))
-                if len(rmzbn) > 0:
-                    futures.append(executor.submit(self.remove_unnecessary_bf, rmzbn))
+                if model.bones[bone_name].getTranslatable():
+                    if len(rmxbn) > 0:
+                        futures.append(executor.submit(self.remove_unnecessary_bf, rmxbn))
+                    if len(rmybn) > 0:
+                        futures.append(executor.submit(self.remove_unnecessary_bf, rmybn))
+                    if len(rmzbn) > 0:
+                        futures.append(executor.submit(self.remove_unnecessary_bf, rmzbn))
 
-        concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
+            concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
-        for f in futures:
-            if not f.result():
-                return False
-        
+            for f in futures:
+                if not f.result():
+                    return False
+            
         return True
 
     # 不要キー削除
@@ -221,26 +227,5 @@ class ConvertMultiSplitService():
             import traceback
             logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
             raise e
-
-    # スタンス用細分化
-    def prepare_split_stance(self, motion: VmdMotion, target_bone_name: str):
-        fnos = motion.get_bone_fnos(target_bone_name)
-
-        for fidx, fno in enumerate(fnos):
-            if fidx == 0:
-                continue
-
-            prev_bf = motion.bones[target_bone_name][fnos[fidx - 1]]
-            bf = motion.bones[target_bone_name][fno]
-            diff_degree = abs(prev_bf.rotation.toDegree() - bf.rotation.toDegree())
-
-            if diff_degree >= 150:
-                # 回転量が約150度以上の場合、半分に分割しておく
-                half_fno = prev_bf.fno + round((bf.fno - prev_bf.fno) / 2)
-
-                if prev_bf.fno < half_fno < bf.fno:
-                    # キーが追加できる状態であれば、追加
-                    half_bf = motion.calc_bf(target_bone_name, half_fno)
-                    motion.regist_bf(half_bf, target_bone_name, half_fno)
 
 

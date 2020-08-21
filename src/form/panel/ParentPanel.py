@@ -59,6 +59,11 @@ class ParentPanel(BasePanel):
         self.center_rotatation_flg_ctrl.SetToolTip(u"チェックを入れると、センターの回転を上半身および下半身に移植します。")
         self.header_sizer.Add(self.center_rotatation_flg_ctrl, 0, wx.ALL, 5)
 
+        # 不要キー削除処理
+        self.remove_unnecessary_flg_ctrl = wx.CheckBox(self, wx.ID_ANY, u"不要キー削除処理を実行する", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.remove_unnecessary_flg_ctrl.SetToolTip(u"チェックを入れると、不要キー削除処理を実行します。キーが減る分、キー間が少しズレる事があります。")
+        self.header_sizer.Add(self.remove_unnecessary_flg_ctrl, 0, wx.ALL, 5)
+
         self.sizer.Add(self.header_sizer, 0, wx.EXPAND | wx.ALL, 5)
 
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -96,7 +101,7 @@ class ParentPanel(BasePanel):
 
     # ファイル変更時の処理
     def on_change_file(self, event: wx.Event):
-        self.set_output_vmd_path(event)
+        self.set_output_vmd_path(event, is_force=True)
     
     def set_output_vmd_path(self, event, is_force=False):
         output_parent_vmd_path = MFileUtils.get_output_parent_vmd_path(

@@ -8,7 +8,7 @@ import traceback
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor
 
-from module.MOptions import MIKtoFKOptions, MOptionsDataSet
+from module.MOptions import MArmIKtoFKOptions, MOptionsDataSet
 from mmd.PmxData import PmxModel, Bone # noqa
 from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
 from mmd.VmdWriter import VmdWriter
@@ -21,8 +21,8 @@ from utils.MException import SizingException
 logger = MLogger(__name__, level=1)
 
 
-class ConvertIKtoFKService():
-    def __init__(self, options: MIKtoFKOptions):
+class ConvertArmIKtoFKService():
+    def __init__(self, options: MArmIKtoFKOptions):
         self.options = options
 
     def execute(self):

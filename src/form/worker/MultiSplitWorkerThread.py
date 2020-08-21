@@ -45,6 +45,7 @@ class MultiSplitWorkerThread(BaseWorkerThread):
                     model=self.frame.multi_split_panel_ctrl.model_file_ctrl.data, \
                     target_bones=self.frame.multi_split_panel_ctrl.bone_dialog.get_bone_list(), \
                     output_path=self.frame.multi_split_panel_ctrl.output_vmd_file_ctrl.file_ctrl.GetPath(), \
+                    remove_unnecessary_flg=self.frame.multi_split_panel_ctrl.remove_unnecessary_flg_ctrl.GetValue(), \
                     monitor=self.frame.multi_split_panel_ctrl.console_ctrl, \
                     is_file=False, \
                     outout_datetime=logger.outout_datetime, \
