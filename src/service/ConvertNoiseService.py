@@ -43,9 +43,10 @@ class ConvertNoiseService():
 
             futures = []
 
-            with ThreadPoolExecutor(thread_name_prefix="move", max_workers=min(5, self.options.max_workers)) as executor:
+            with ThreadPoolExecutor(thread_name_prefix="move", max_workers=self.options.max_workers) as executor:
                 for copy_no in range(self.options.copy_cnt):
-                    futures.append(executor.submit(self.convert_noise, copy_no))
+                    seed = np.random.randint(85, 115) / 100
+                    futures.append(executor.submit(self.convert_noise, copy_no, seed))
 
             concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
@@ -64,7 +65,7 @@ class ConvertNoiseService():
             logging.shutdown()
 
     # ゆらぎ複製処理実行
-    def convert_noise(self, copy_no):
+    def convert_noise(self, copy_no: int, seed: float):
         logger.info("ゆらぎ複製　【No.%s】", (copy_no + 1), decoration=MLogger.DECORATION_LINE)
 
         # データをコピーしてそっちを弄る
@@ -96,16 +97,16 @@ class ConvertNoiseService():
                     else:
                         # 0だったら動かさない
                         if round(org_bf.position.x(), 1) != 0:
-                            bf.position.setX(bf.position.x() + (0.5 - np.random.rand()) * (self.options.noise_size / 10))
+                            bf.position.setX(bf.position.x() * seed + (0.5 - np.random.rand()) * (self.options.noise_size / 10))
                         if round(org_bf.position.y(), 1) != 0 and "足ＩＫ" not in bone_name:
                             # 足ＩＫのＹは動かさない
                             if org_bf.position.y() < 0:
                                 # Yはオリジナルがマイナスの場合は、マイナスのみに動かす
-                                bf.position.setY(bf.position.y() + (0 - np.random.rand()) * (self.options.noise_size / 10))
+                                bf.position.setY(bf.position.y() * seed + (0 - np.random.rand()) * (self.options.noise_size / 10))
                             elif org_bf.position.y() > 0:
-                                bf.position.setY(bf.position.y() + (0.5 - np.random.rand()) * (self.options.noise_size / 10))
+                                bf.position.setY(bf.position.y() * seed + (0.5 - np.random.rand()) * (self.options.noise_size / 10))
                         if round(org_bf.position.z(), 1) != 0:
-                            bf.position.setZ(bf.position.z() + (0.5 - np.random.rand()) * (self.options.noise_size / 10))
+                            bf.position.setZ(bf.position.z() * seed + (0.5 - np.random.rand()) * (self.options.noise_size / 10))
 
                         # 移動補間曲線
                         for (bz_idx1, bz_idx2, bz_idx3, bz_idx4) in [MBezierUtils.MX_x1_idxs, MBezierUtils.MX_y1_idxs, MBezierUtils.MX_x2_idxs, MBezierUtils.MX_y2_idxs, \
@@ -116,18 +117,17 @@ class ConvertNoiseService():
                 
                 # 回転
                 euler = bf.rotation.toEulerAngles()
-                if euler != MVector3D():
-                    # 回転は元が0であっても動かす
-                    euler.setX(euler.x() + (0.5 - np.random.rand()) * self.options.noise_size)
-                    euler.setY(euler.y() + (0.5 - np.random.rand()) * self.options.noise_size)
-                    euler.setZ(euler.z() + (0.5 - np.random.rand()) * self.options.noise_size)
-                    bf.rotation = MQuaternion.fromEulerAngles(euler.x(), euler.y(), euler.z())
+                # 回転は元が0であっても動かす
+                euler.setX(euler.x() * seed + (0.5 - np.random.rand()) * self.options.noise_size)
+                euler.setY(euler.y() * seed + (0.5 - np.random.rand()) * self.options.noise_size)
+                euler.setZ(euler.z() * seed + (0.5 - np.random.rand()) * self.options.noise_size)
+                bf.rotation = MQuaternion.fromEulerAngles(euler.x(), euler.y(), euler.z())
 
-                    # 回転補間曲線
-                    for (bz_idx1, bz_idx2, bz_idx3, bz_idx4) in [MBezierUtils.R_x1_idxs, MBezierUtils.R_y1_idxs, MBezierUtils.R_x2_idxs, MBezierUtils.R_y2_idxs]:
-                        noise_interpolation = bf.interpolation[bz_idx1] + math.ceil((0.5 - np.random.rand()) * self.options.noise_size)
+                # 回転補間曲線
+                for (bz_idx1, bz_idx2, bz_idx3, bz_idx4) in [MBezierUtils.R_x1_idxs, MBezierUtils.R_y1_idxs, MBezierUtils.R_x2_idxs, MBezierUtils.R_y2_idxs]:
+                    noise_interpolation = bf.interpolation[bz_idx1] + math.ceil((0.5 - np.random.rand()) * self.options.noise_size)
 
-                        bf.interpolation[bz_idx1] = bf.interpolation[bz_idx2] = bf.interpolation[bz_idx3] = bf.interpolation[bz_idx4] = int(noise_interpolation)
+                    bf.interpolation[bz_idx1] = bf.interpolation[bz_idx2] = bf.interpolation[bz_idx3] = bf.interpolation[bz_idx4] = int(noise_interpolation)
                 
                 # 前回fno保持
                 prev_fno = fno
@@ -137,6 +137,7 @@ class ConvertNoiseService():
                     prev_sep_fno = fno // 2000
 
         output_path = self.options.output_path.replace("nxxx", "n{0:03d}".format(copy_no + 1))
+        output_path = output_path.replace("axxx", "a{0:+03d}".format(int(seed * 100) - 100))
 
         # 最後に出力
         VmdWriter(MOptionsDataSet(motion, None, self.options.model, output_path, False, False, [], None, 0, [])).write()

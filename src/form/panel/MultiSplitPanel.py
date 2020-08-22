@@ -31,7 +31,8 @@ class MultiSplitPanel(BasePanel):
         self.header_sizer = wx.BoxSizer(wx.VERTICAL)
 
         self.description_txt = wx.StaticText(self, wx.ID_ANY, u"モーションの指定ボーンの移動量と回転量をXYZに分割します。分割するボーンは「ボーン指定」ボタンから定義できます。" \
-                                             + "\n回転ボーンは、YXZの順番で多段化したボーンを適用すると、回転結果がオリジナルと一致します。", wx.DefaultPosition, wx.DefaultSize, 0)
+                                             + "\n回転ボーンは、YXZの順番で多段化したボーンを適用すると、回転結果がオリジナルと一致します。" \
+                                             + "\n不要キー削除を行うと、キーが間引きされます。キー間がオリジナルから多少ずれ、またかなり時間がかかります。", wx.DefaultPosition, wx.DefaultSize, 0)
         self.header_sizer.Add(self.description_txt, 0, wx.ALL, 5)
 
         self.static_line01 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
@@ -77,8 +78,8 @@ class MultiSplitPanel(BasePanel):
 
         # 不要キー削除処理
         self.flg_sizer = wx.BoxSizer(wx.VERTICAL)
-        self.remove_unnecessary_flg_ctrl = wx.CheckBox(self, wx.ID_ANY, u"不要キー削除処理を実行する", wx.DefaultPosition, wx.DefaultSize, 0)
-        self.remove_unnecessary_flg_ctrl.SetToolTip(u"チェックを入れると、不要キー削除処理を実行します。キーが減る分、キー間が少しズレる事があります。")
+        self.remove_unnecessary_flg_ctrl = wx.CheckBox(self, wx.ID_ANY, u"不要キー削除処理を追加実行する", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.remove_unnecessary_flg_ctrl.SetToolTip(u"チェックを入れると、不要キー削除処理を追加で実行します。キーが減る分、キー間が少しズレる事があります。")
         self.flg_sizer.Add(self.remove_unnecessary_flg_ctrl, 0, wx.ALL, 5)
         self.sizer.Add(self.flg_sizer, 0, wx.EXPAND | wx.ALL, 5)
 

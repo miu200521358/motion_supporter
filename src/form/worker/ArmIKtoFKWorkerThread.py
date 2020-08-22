@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 #
 
-import re
 import logging
+import re
 import os
 import wx
 import time
 import gc
+
 from form.worker.BaseWorkerThread import BaseWorkerThread, task_takes_time
 from service.ConvertArmIKtoFKService import ConvertArmIKtoFKService
 from module.MOptions import MArmIKtoFKOptions
@@ -17,33 +18,34 @@ logger = MLogger(__name__)
 
 class ArmIKtoFKWorkerThread(BaseWorkerThread):
 
-    def __init__(self, frame: wx.Frame, result_event: wx.Event, is_out_log: bool, is_exec_saving: bool):
+    def __init__(self, frame: wx.Frame, result_event: wx.Event, is_exec_saving: bool, is_out_log: bool):
         self.elapsed_time = 0
         self.frame = frame
         self.result_event = result_event
-        self.gauge_ctrl = frame.ik2fk_panel_ctrl.gauge_ctrl
+        self.gauge_ctrl = frame.arm_ik2fk_panel_ctrl.gauge_ctrl
         self.is_exec_saving = is_exec_saving
         self.is_out_log = is_out_log
         self.options = None
 
-        super().__init__(frame, self.result_event, frame.ik2fk_panel_ctrl.console_ctrl)
+        super().__init__(frame, self.result_event, frame.arm_ik2fk_panel_ctrl.console_ctrl)
 
     @task_takes_time
     def thread_event(self):
         try:
             start = time.time()
 
-            self.result = self.frame.ik2fk_panel_ctrl.ik2fk_vmd_file_ctrl.load() and self.result
-            self.result = self.frame.ik2fk_panel_ctrl.ik2fk_model_file_ctrl.load(is_check=False) and self.result
+            self.result = self.frame.arm_ik2fk_panel_ctrl.arm_ik2fk_vmd_file_ctrl.load() and self.result
+            self.result = self.frame.arm_ik2fk_panel_ctrl.arm_ik2fk_model_file_ctrl.load(is_check=False) and self.result
 
             if self.result:
                 self.options = MArmIKtoFKOptions(\
                     version_name=self.frame.version_name, \
                     logging_level=self.frame.logging_level, \
-                    motion=self.frame.ik2fk_panel_ctrl.ik2fk_vmd_file_ctrl.data, \
-                    model=self.frame.ik2fk_panel_ctrl.ik2fk_model_file_ctrl.data, \
-                    output_path=self.frame.ik2fk_panel_ctrl.output_ik2fk_vmd_file_ctrl.file_ctrl.GetPath(), \
-                    monitor=self.frame.ik2fk_panel_ctrl.console_ctrl, \
+                    motion=self.frame.arm_ik2fk_panel_ctrl.arm_ik2fk_vmd_file_ctrl.data.copy(), \
+                    model=self.frame.arm_ik2fk_panel_ctrl.arm_ik2fk_model_file_ctrl.data, \
+                    output_path=self.frame.arm_ik2fk_panel_ctrl.output_arm_ik2fk_vmd_file_ctrl.file_ctrl.GetPath(), \
+                    remove_unnecessary_flg=self.frame.arm_ik2fk_panel_ctrl.remove_unnecessary_flg_ctrl.GetValue(), \
+                    monitor=self.frame.arm_ik2fk_panel_ctrl.console_ctrl, \
                     is_file=False, \
                     outout_datetime=logger.outout_datetime, \
                     max_workers=(1 if self.is_exec_saving else min(32, os.cpu_count() + 4)))
@@ -51,16 +53,18 @@ class ArmIKtoFKWorkerThread(BaseWorkerThread):
                 self.result = ConvertArmIKtoFKService(self.options).execute() and self.result
 
             self.elapsed_time = time.time() - start
+        except Exception as e:
+            logger.critical("足ＩＫ変換処理が意図せぬエラーで終了しました。", e, decoration=MLogger.DECORATION_BOX)
         finally:
             try:
                 logger.debug("★★★result: %s, is_killed: %s", self.result, self.is_killed)
                 if self.is_out_log or (not self.result and not self.is_killed):
                     # ログパス生成
-                    output_vmd_path = self.frame.ik2fk_panel_ctrl.output_ik2fk_vmd_file_ctrl.file_ctrl.GetPath()
+                    output_vmd_path = self.frame.arm_ik2fk_panel_ctrl.output_arm_ik2fk_vmd_file_ctrl.file_ctrl.GetPath()
                     output_log_path = re.sub(r'\.vmd$', '.log', output_vmd_path)
 
                     # 出力されたメッセージを全部出力
-                    self.frame.ik2fk_panel_ctrl.console_ctrl.SaveFile(filename=output_log_path)
+                    self.frame.arm_ik2fk_panel_ctrl.console_ctrl.SaveFile(filename=output_log_path)
 
             except Exception:
                 pass
@@ -72,4 +76,4 @@ class ArmIKtoFKWorkerThread(BaseWorkerThread):
         gc.collect()
         
     def post_event(self):
-        wx.PostEvent(self.frame, self.result_event(result=self.result, elapsed_time=self.elapsed_time))
+        wx.PostEvent(self.frame, self.result_event(result=self.result and not self.is_killed, elapsed_time=self.elapsed_time))

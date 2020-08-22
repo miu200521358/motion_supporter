@@ -39,7 +39,7 @@ class ConvertLegFKtoIKService():
 
             futures = []
 
-            with ThreadPoolExecutor(thread_name_prefix="leffk", max_workers=min(5, self.options.max_workers)) as executor:
+            with ThreadPoolExecutor(thread_name_prefix="leffk", max_workers=self.options.max_workers) as executor:
                 futures.append(executor.submit(self.convert_leg_fk2ik, "右"))
                 futures.append(executor.submit(self.convert_leg_fk2ik, "左"))
 
@@ -141,25 +141,7 @@ class ConvertLegFKtoIKService():
                     ikf.onoff = 1
 
         if self.options.remove_unnecessary_flg:
-            self.remove_unnecessary_bf(leg_ik_bone_name)
+            self.options.motion.remove_unnecessary_bf(0, leg_ik_bone_name, self.options.model.bones[leg_ik_bone_name].getRotatable(), \
+                                                      self.options.model.bones[leg_ik_bone_name].getTranslatable())
         
         return True
-
-    # 不要キー削除
-    def remove_unnecessary_bf(self, bone_name: str):
-        try:
-            self.options.motion.remove_unnecessary_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
-                                                      self.options.model.bones[bone_name].getTranslatable())
-
-            return True
-        except MKilledException as ke:
-            raise ke
-        except SizingException as se:
-            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
-            return se
-        except Exception as e:
-            import traceback
-            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
-            raise e
-
-

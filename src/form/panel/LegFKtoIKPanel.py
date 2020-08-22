@@ -28,7 +28,9 @@ class LegFKtoIKPanel(BasePanel):
 
         self.header_sizer = wx.BoxSizer(wx.VERTICAL)
 
-        self.description_txt = wx.StaticText(self, wx.ID_ANY, u"足FK（足・ひざ・足首）を足IK（足ＩＫの位置と角度）に変換します", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.description_txt = wx.StaticText(self, wx.ID_ANY, u"足FK（足・ひざ・足首）を足IK（足ＩＫの位置と角度）に変換します" \
+                                             + "\nIKonoffもIKonに変換されます。FKは残してあるので、IKoffにしても同じ動きになります。" \
+                                             + "\n不要キー削除を行うと、キーが間引きされます。キー間がオリジナルから多少ずれ、またかなり時間がかかります。", wx.DefaultPosition, wx.DefaultSize, 0)
         self.header_sizer.Add(self.description_txt, 0, wx.ALL, 5)
 
         self.static_line01 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
@@ -55,8 +57,8 @@ class LegFKtoIKPanel(BasePanel):
         self.header_sizer.Add(self.output_leg_fk2ik_vmd_file_ctrl.sizer, 1, wx.EXPAND, 0)
 
         # 不要キー削除処理
-        self.remove_unnecessary_flg_ctrl = wx.CheckBox(self, wx.ID_ANY, u"不要キー削除処理を実行する", wx.DefaultPosition, wx.DefaultSize, 0)
-        self.remove_unnecessary_flg_ctrl.SetToolTip(u"チェックを入れると、不要キー削除処理を実行します。キーが減る分、キー間が少しズレる事があります。")
+        self.remove_unnecessary_flg_ctrl = wx.CheckBox(self, wx.ID_ANY, u"不要キー削除処理を追加実行する", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.remove_unnecessary_flg_ctrl.SetToolTip(u"チェックを入れると、不要キー削除処理を追加で実行します。キーが減る分、キー間が少しズレる事があります。")
         self.header_sizer.Add(self.remove_unnecessary_flg_ctrl, 0, wx.ALL, 5)
 
         self.sizer.Add(self.header_sizer, 0, wx.EXPAND | wx.ALL, 5)
@@ -64,7 +66,7 @@ class LegFKtoIKPanel(BasePanel):
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
         # 多段分割変換実行ボタン
-        self.leg_fk2ik_btn_ctrl = wx.Button(self, wx.ID_ANY, u"足ＩＫ変換", wx.DefaultPosition, wx.Size(200, 50), 0)
+        self.leg_fk2ik_btn_ctrl = wx.Button(self, wx.ID_ANY, u"足ＦＫ変換", wx.DefaultPosition, wx.Size(200, 50), 0)
         self.leg_fk2ik_btn_ctrl.SetToolTip(u"足FKを足IKに変換したモーションを再生成します。")
         self.leg_fk2ik_btn_ctrl.Bind(wx.EVT_LEFT_DOWN, self.on_convert_leg_fk2ik)
         self.leg_fk2ik_btn_ctrl.Bind(wx.EVT_LEFT_DCLICK, self.on_doubleclick)
@@ -168,8 +170,8 @@ class LegFKtoIKPanel(BasePanel):
 
             return result
 
-        # 足ＩＫ変換変換開始
-        if self.leg_fk2ik_btn_ctrl.GetLabel() == "足ＩＫ変換停止" and self.convert_leg_fk2ik_worker:
+        # 足ＦＫ変換変換開始
+        if self.leg_fk2ik_btn_ctrl.GetLabel() == "足ＦＫ変換停止" and self.convert_leg_fk2ik_worker:
             # フォーム無効化
             self.disable()
             # 停止状態でボタン押下時、停止
@@ -184,8 +186,8 @@ class LegFKtoIKPanel(BasePanel):
             # プログレス非表示
             self.gauge_ctrl.SetValue(0)
 
-            logger.warning("足ＩＫ変換を中断します。", decoration=MLogger.DECORATION_BOX)
-            self.leg_fk2ik_btn_ctrl.SetLabel("足ＩＫ変換")
+            logger.warning("足ＦＫ変換を中断します。", decoration=MLogger.DECORATION_BOX)
+            self.leg_fk2ik_btn_ctrl.SetLabel("足ＦＫ変換")
             
             event.Skip(False)
         elif not self.convert_leg_fk2ik_worker:
@@ -196,7 +198,7 @@ class LegFKtoIKPanel(BasePanel):
             # コンソールクリア
             self.console_ctrl.Clear()
             # ラベル変更
-            self.leg_fk2ik_btn_ctrl.SetLabel("足ＩＫ変換停止")
+            self.leg_fk2ik_btn_ctrl.SetLabel("足ＦＫ変換停止")
             self.leg_fk2ik_btn_ctrl.Enable()
 
             self.convert_leg_fk2ik_worker = LegFKtoIKWorkerThread(self.frame, LegFKtoIKThreadEvent, self.frame.is_saving, self.frame.is_out_log)

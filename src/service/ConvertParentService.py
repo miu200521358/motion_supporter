@@ -209,7 +209,7 @@ class ConvertParentService():
         if self.options.remove_unnecessary_flg:
             futures = []
 
-            with ThreadPoolExecutor(thread_name_prefix="remove", max_workers=min(5, self.options.max_workers)) as executor:
+            with ThreadPoolExecutor(thread_name_prefix="remove", max_workers=self.options.max_workers) as executor:
                 for bone_name in [center_bone_name, upper_bone_name, lower_bone_name, right_leg_ik_bone_name, left_leg_ik_bone_name]:
                     futures.append(executor.submit(self.remove_unnecessary_bf, bone_name))
 

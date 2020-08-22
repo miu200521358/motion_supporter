@@ -28,7 +28,9 @@ class ParentPanel(BasePanel):
 
         self.header_sizer = wx.BoxSizer(wx.VERTICAL)
 
-        self.description_txt = wx.StaticText(self, wx.ID_ANY, u"全親を含むモーションを、全親の値をセンター・上半身・下半身・足ＩＫに移植して、全親なしのモーションに変換します。", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.description_txt = wx.StaticText(self, wx.ID_ANY, u"全親を含むモーションを、全親の値をセンター・上半身・下半身・足ＩＫに移植して、全親なしのモーションに変換します。\n" \
+                                             + "センター回転移植のチェックを入れると、移植有無にかかわらず、センター回転を上半身・下半身に移植します。\n" \
+                                             + "不要キー削除を行うと、キーが間引きされます。キー間がオリジナルから多少ずれ、またかなり時間がかかります。", wx.DefaultPosition, wx.DefaultSize, 0)
         self.header_sizer.Add(self.description_txt, 0, wx.ALL, 5)
 
         self.static_line01 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
@@ -54,17 +56,21 @@ class ParentPanel(BasePanel):
                                                               is_aster=False, is_save=True, set_no=1)
         self.header_sizer.Add(self.output_parent_vmd_file_ctrl.sizer, 1, wx.EXPAND, 0)
 
+        self.sizer.Add(self.header_sizer, 0, wx.EXPAND | wx.ALL, 5)
+
+        self.flg_sizer = wx.BoxSizer(wx.HORIZONTAL)
+
         # センター回転ON/OFF
         self.center_rotatation_flg_ctrl = wx.CheckBox(self, wx.ID_ANY, u"センターの回転を上半身/下半身に移植する", wx.DefaultPosition, wx.DefaultSize, 0)
         self.center_rotatation_flg_ctrl.SetToolTip(u"チェックを入れると、センターの回転を上半身および下半身に移植します。")
-        self.header_sizer.Add(self.center_rotatation_flg_ctrl, 0, wx.ALL, 5)
+        self.flg_sizer.Add(self.center_rotatation_flg_ctrl, 0, wx.ALL, 5)
 
         # 不要キー削除処理
-        self.remove_unnecessary_flg_ctrl = wx.CheckBox(self, wx.ID_ANY, u"不要キー削除処理を実行する", wx.DefaultPosition, wx.DefaultSize, 0)
-        self.remove_unnecessary_flg_ctrl.SetToolTip(u"チェックを入れると、不要キー削除処理を実行します。キーが減る分、キー間が少しズレる事があります。")
-        self.header_sizer.Add(self.remove_unnecessary_flg_ctrl, 0, wx.ALL, 5)
+        self.remove_unnecessary_flg_ctrl = wx.CheckBox(self, wx.ID_ANY, u"不要キー削除処理を追加実行する", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.remove_unnecessary_flg_ctrl.SetToolTip(u"チェックを入れると、不要キー削除処理を追加で実行します。キーが減る分、キー間が少しズレる事があります。")
+        self.flg_sizer.Add(self.remove_unnecessary_flg_ctrl, 0, wx.ALL, 5)
 
-        self.sizer.Add(self.header_sizer, 0, wx.EXPAND | wx.ALL, 5)
+        self.sizer.Add(self.flg_sizer, 0, wx.EXPAND | wx.ALL, 5)
 
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
 

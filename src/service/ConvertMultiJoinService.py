@@ -44,7 +44,7 @@ class ConvertMultiJoinService():
 
             futures = []
 
-            with ThreadPoolExecutor(thread_name_prefix="join", max_workers=min(5, self.options.max_workers)) as executor:
+            with ThreadPoolExecutor(thread_name_prefix="join", max_workers=self.options.max_workers) as executor:
                 for (bone_name, rrxbn, rrybn, rrzbn, rmxbn, rmybn, rmzbn) in self.options.target_bones:
                     futures.append(executor.submit(self.convert_multi_join, bone_name, rrxbn, rrybn, rrzbn, rmxbn, rmybn, rmzbn))
 
@@ -130,10 +130,14 @@ class ConvertMultiJoinService():
         if len(rmzbn) > 0 and rmzbn in motion.bones and rmzbn != bone_name:
             del motion.bones[rmzbn]
 
+        # 一旦跳ねてるのを除去
+        self.options.motion.smooth_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
+                                      self.options.model.bones[bone_name].getTranslatable(), limit_degrees=10)
+
         # 不要キー削除
         if self.options.remove_unnecessary_flg:
             self.options.motion.remove_unnecessary_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
-                                                      self.options.model.bones[bone_name].getTranslatable())
+                                                      self.options.model.bones[bone_name].getTranslatable(), rot_diff_limit=0.001, mov_diff_limit=0.01)
         
         return True
 

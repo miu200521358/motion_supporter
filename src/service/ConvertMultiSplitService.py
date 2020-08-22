@@ -47,7 +47,7 @@ class ConvertMultiSplitService():
 
             futures = []
 
-            with ThreadPoolExecutor(thread_name_prefix="split", max_workers=min(5, self.options.max_workers)) as executor:
+            with ThreadPoolExecutor(thread_name_prefix="split", max_workers=self.options.max_workers) as executor:
                 for (bone_name, rrxbn, rrybn, rrzbn, rmxbn, rmybn, rmzbn) in self.options.target_bones:
                     if bone_name not in model.bones or bone_name not in motion.bones:
                         continue
@@ -183,10 +183,35 @@ class ConvertMultiSplitService():
         if rrxbn != bone_name and rrybn != bone_name and rrzbn != bone_name and rmxbn != bone_name and rmybn != bone_name and rmzbn != bone_name:
             del motion.bones[bone_name]
 
+        # 跳ねてるの除去
+        futures = []
+        with ThreadPoolExecutor(thread_name_prefix="smooth", max_workers=self.options.max_workers) as executor:
+            if model.bones[bone_name].getRotatable():
+                if len(rrxbn) > 0:
+                    futures.append(executor.submit(self.smooth_bf, rrxbn))
+                if len(rrybn) > 0:
+                    futures.append(executor.submit(self.smooth_bf, rrybn))
+                if len(rrzbn) > 0:
+                    futures.append(executor.submit(self.smooth_bf, rrzbn))
+
+            if model.bones[bone_name].getTranslatable():
+                if len(rmxbn) > 0:
+                    futures.append(executor.submit(self.smooth_bf, rmxbn))
+                if len(rmybn) > 0:
+                    futures.append(executor.submit(self.smooth_bf, rmybn))
+                if len(rmzbn) > 0:
+                    futures.append(executor.submit(self.smooth_bf, rmzbn))
+
+        concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
+
+        for f in futures:
+            if not f.result():
+                return False
+
         if self.options.remove_unnecessary_flg:
             # 不要キー削除
             futures = []
-            with ThreadPoolExecutor(thread_name_prefix="remove", max_workers=min(6, self.options.max_workers)) as executor:
+            with ThreadPoolExecutor(thread_name_prefix="remove", max_workers=self.options.max_workers) as executor:
                 if model.bones[bone_name].getRotatable():
                     if len(rrxbn) > 0:
                         futures.append(executor.submit(self.remove_unnecessary_bf, rrxbn))
@@ -210,6 +235,23 @@ class ConvertMultiSplitService():
                     return False
             
         return True
+
+    def smooth_bf(self, bone_name: str):
+        try:
+            # 一旦跳ねてるのを除去
+            self.options.motion.smooth_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
+                                          self.options.model.bones[bone_name].getTranslatable(), limit_degrees=10)
+
+            return True
+        except MKilledException as ke:
+            raise ke
+        except SizingException as se:
+            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
+            return se
+        except Exception as e:
+            import traceback
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            raise e
 
     # 不要キー削除
     def remove_unnecessary_bf(self, bone_name: str):

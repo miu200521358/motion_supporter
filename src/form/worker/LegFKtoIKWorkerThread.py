@@ -54,7 +54,7 @@ class LegFKtoIKWorkerThread(BaseWorkerThread):
 
             self.elapsed_time = time.time() - start
         except Exception as e:
-            logger.critical("足ＩＫ変換処理が意図せぬエラーで終了しました。", e, decoration=MLogger.DECORATION_BOX)
+            logger.critical("足ＦＫ変換処理が意図せぬエラーで終了しました。", e, decoration=MLogger.DECORATION_BOX)
         finally:
             try:
                 logger.debug("★★★result: %s, is_killed: %s", self.result, self.is_killed)

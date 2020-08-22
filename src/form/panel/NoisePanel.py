@@ -29,7 +29,8 @@ class NoisePanel(BasePanel):
 
         self.header_sizer = wx.BoxSizer(wx.VERTICAL)
 
-        self.description_txt = wx.StaticText(self, wx.ID_ANY, u"モーションをゆらぎ（ノイズ）を付与して複製します", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.description_txt = wx.StaticText(self, wx.ID_ANY, u"モーションをゆらぎ（ノイズ）を付与して複製します。\n" \
+                                             + "出力ファイル名のNxxは指定ゆらぎの大きさ、nxxxは複製連番、axxxはやる気係数（身体の振りの大きさ）です。", wx.DefaultPosition, wx.DefaultSize, 0)
         self.header_sizer.Add(self.description_txt, 0, wx.ALL, 5)
 
         self.static_line01 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)

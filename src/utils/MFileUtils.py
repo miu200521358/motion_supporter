@@ -153,7 +153,7 @@ def get_output_noise_vmd_path(base_file_path: str, output_noise_vmd_path: str, n
     motion_noise_vmd_file_name, _ = os.path.splitext(os.path.basename(base_file_path))
 
     # 出力ファイルパス生成
-    new_output_noise_vmd_path = os.path.join(motion_noise_vmd_dir_path, "{0}_N{1}_{2:%Y%m%d_%H%M%S}_nxxx{3}".format(motion_noise_vmd_file_name, noise_size, datetime.now(), ".vmd"))
+    new_output_noise_vmd_path = os.path.join(motion_noise_vmd_dir_path, "{0}_N{1}_{2:%Y%m%d_%H%M%S}_axxx_nxxx{3}".format(motion_noise_vmd_file_name, noise_size, datetime.now(), ".vmd"))
 
     # ファイルパス自体が変更されたか、自動生成ルールに則っている場合、ファイルパス変更
     if is_force or is_auto_noise_vmd_output_path(output_noise_vmd_path, motion_noise_vmd_dir_path, motion_noise_vmd_file_name, noise_size, ".vmd"):
@@ -183,7 +183,7 @@ def is_auto_noise_vmd_output_path(output_noise_vmd_path: str, motion_noise_vmd_d
     escaped_motion_noise_vmd_file_name = escape_filepath(os.path.join(motion_noise_vmd_dir_path, motion_noise_vmd_file_name))
     escaped_motion_noise_vmd_ext = escape_filepath(motion_noise_vmd_ext)
 
-    new_output_noise_vmd_pattern = re.compile(r'^%s_N\d+_\d{8}_\d{6}_nxxx%s$' % (escaped_motion_noise_vmd_file_name, escaped_motion_noise_vmd_ext))
+    new_output_noise_vmd_pattern = re.compile(r'^%s_N\d+_\d{8}_\d{6}_axxx_nxxx%s$' % (escaped_motion_noise_vmd_file_name, escaped_motion_noise_vmd_ext))
     
     # 自動生成ルールに則ったファイルパスである場合、合致あり
     return re.match(new_output_noise_vmd_pattern, output_noise_vmd_path) is not None
