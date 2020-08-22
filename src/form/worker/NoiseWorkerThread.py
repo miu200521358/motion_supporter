@@ -53,7 +53,7 @@ class NoiseWorkerThread(BaseWorkerThread):
                     monitor=self.frame.noise_panel_ctrl.console_ctrl, \
                     is_file=False, \
                     outout_datetime=logger.outout_datetime, \
-                    max_workers=(1 if self.is_exec_saving else min(32, os.cpu_count() + 4)))
+                    max_workers=(1 if self.is_exec_saving else min(5, 32, os.cpu_count() + 4)))
                 
                 self.result = ConvertNoiseService(self.options).execute() and self.result
 

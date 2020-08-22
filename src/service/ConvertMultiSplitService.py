@@ -83,7 +83,7 @@ class ConvertMultiSplitService():
         model = self.options.model
 
         # 事前に変化量全打ち
-        fnos = motion.get_differ_fnos(0, [bone_name], limit_degrees=10, limit_length=0.5)
+        fnos = motion.get_differ_fnos(0, [bone_name], limit_degrees=20, limit_length=1)
 
         # # 事前に分離全打ち
         # fnos = motion.get_bone_fnos(bone_name)
