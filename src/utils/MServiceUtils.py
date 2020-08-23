@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 #
 import copy
-import numpy as np # noqa
 import math # noqa
 from collections import OrderedDict
 

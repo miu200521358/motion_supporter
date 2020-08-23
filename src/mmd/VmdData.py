@@ -4,6 +4,7 @@ import math
 import numpy as np
 import struct
 import _pickle as cPickle
+import cython
 
 from module.OneEuroFilter import OneEuroFilter
 from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
@@ -623,7 +624,8 @@ class VmdMotion():
         logger.debug("remove_unnecessary_bf after: %s, %s, all: %s", bone_name, active_fnos, len(fnos))
     
     # 補間曲線分割ありで登録
-    def regist_bf(self, bf: VmdBoneFrame, bone_name: str, fno: int, copy_interpolation=False):
+    @cython.cfunc
+    def regist_bf(self, bf: VmdBoneFrame, bone_name: str, fno: cython.int, copy_interpolation=False):
         # 登録対象の場合のみ、補間曲線リセットで登録する
         regist_bf = self.calc_bf(bone_name, fno, is_reset_interpolation=True)
         regist_bf.position = bf.position.copy()
