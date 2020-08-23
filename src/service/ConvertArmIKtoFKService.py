@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 #
 import math
-from math import dist
 import numpy as np
 import logging
 import os
