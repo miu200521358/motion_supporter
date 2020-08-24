@@ -51,3 +51,5 @@ src/VmdSizingForm3.py.bak
 main.prof
 executor.py.lprof
 *.thread
+*.c
+*.pyd
