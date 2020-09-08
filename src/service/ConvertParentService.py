@@ -6,6 +6,9 @@ import traceback
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor
 
+import pyximport
+pyximport.install()
+
 from module.MOptions import MParentOptions, MOptionsDataSet
 from mmd.PmxData import PmxModel # noqa
 from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
@@ -64,22 +67,39 @@ class ConvertParentService():
 
         root_bone_name = "全ての親"
         center_bone_name = "センター"
+        center_parent_bone_name = "センター親"
         waist_bone_name = "腰"
         upper_bone_name = "上半身"
         lower_bone_name = "下半身"
         left_leg_ik_bone_name = "左足ＩＫ"
         right_leg_ik_bone_name = "右足ＩＫ"
+        left_leg_ik_parent_bone_name = "左足IK親"
+        right_leg_ik_parent_bone_name = "右足IK親"
 
         # まずキー登録
-        for bone_name in [root_bone_name]:
+        # for bone_name in [root_bone_name]:
+        #     if bone_name in model.bones:
+        #         prev_sep_fno = 0
+        #         fnos = motion.get_bone_fnos(root_bone_name, center_bone_name, waist_bone_name, upper_bone_name, lower_bone_name, \
+        #                                     left_leg_ik_bone_name, right_leg_ik_bone_name, center_parent_bone_name, \
+        #                                     left_leg_ik_parent_bone_name, right_leg_ik_parent_bone_name)
+        #         for fno in fnos:
+        #             bf = motion.calc_bf(bone_name, fno)
+        #             motion.regist_bf(bf, bone_name, fno)
+
+        #             if fno // 2000 > prev_sep_fno and fnos[-1] > 0:
+        #                 logger.info("-- %sフレーム目:終了(%s％)【準備 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
+        #                 prev_sep_fno = fno // 2000
+
+        for bone_name in [center_bone_name]:
             if bone_name in model.bones:
                 prev_sep_fno = 0
-                fnos = motion.get_bone_fnos(root_bone_name, center_bone_name, waist_bone_name, upper_bone_name, lower_bone_name, \
-                                            left_leg_ik_bone_name, right_leg_ik_bone_name)
+                fnos = motion.get_bone_fnos(bone_name, root_bone_name)
+
                 for fno in fnos:
                     bf = motion.calc_bf(bone_name, fno)
                     motion.regist_bf(bf, bone_name, fno)
-
+            
                     if fno // 2000 > prev_sep_fno and fnos[-1] > 0:
                         logger.info("-- %sフレーム目:終了(%s％)【準備 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
                         prev_sep_fno = fno // 2000
@@ -101,7 +121,7 @@ class ConvertParentService():
         for bone_name in [right_leg_ik_bone_name, left_leg_ik_bone_name]:
             if bone_name in model.bones:
                 prev_sep_fno = 0
-                fnos = motion.get_bone_fnos(bone_name, root_bone_name)
+                fnos = motion.get_bone_fnos(bone_name, root_bone_name, left_leg_ik_parent_bone_name, right_leg_ik_parent_bone_name)
 
                 for fno in fnos:
                     bf = motion.calc_bf(bone_name, fno)
@@ -115,22 +135,30 @@ class ConvertParentService():
         for bone_name in [center_bone_name]:
             if bone_name in model.bones:
                 prev_sep_fno = 0
-                links = model.create_link_2_top_one(bone_name)
+                links = model.create_link_2_top_one(bone_name, is_defined=False)
                 fnos = motion.get_bone_fnos(bone_name, root_bone_name)
 
                 # 移植
                 for fno in fnos:
                     root_bf = motion.calc_bf(root_bone_name, fno)
+                    center_parent_bf = motion.calc_bf(center_parent_bone_name, fno)
 
                     bf = motion.calc_bf(bone_name, fno)
+                    # logger.info("f: %s, prev bf.position: %s", fno, bf.position)
+
+                    relative_3ds_dic = MServiceUtils.calc_relative_position(model, links, motion, fno)
+                    # [logger.info("R %s", v.to_log()) for v in relative_3ds_dic]
                     global_3ds_dic = MServiceUtils.calc_global_pos(model, links, motion, fno)
                     bone_global_pos = global_3ds_dic[bone_name]
+                    # [logger.info("G %s: %s", k, v.to_log()) for k, v in global_3ds_dic.items()]
+                    # logger.info("f: %s, bone_global_pos: %s", fno, bone_global_pos)
 
-                    # グローバル位置からの差
+                    # グローバル位置からの差(センター親があった場合、それも加味して入れてしまう)
                     bf.position = bone_global_pos - model.bones[bone_name].position
+                    # logger.info("f: %s, bf.position: %s", fno, bf.position)
 
                     # 回転の吸収
-                    bf.rotation = root_bf.rotation * bf.rotation
+                    bf.rotation = root_bf.rotation * center_parent_bf.rotation * bf.rotation
 
                     motion.regist_bf(bf, bone_name, fno)
 
@@ -139,25 +167,26 @@ class ConvertParentService():
                         prev_sep_fno = fno // 2000
 
         # 足IKの移植
-        for bone_name in [right_leg_ik_bone_name, left_leg_ik_bone_name]:
+        for bone_name, parent_bone_name in [(right_leg_ik_bone_name, right_leg_ik_parent_bone_name), (left_leg_ik_bone_name, left_leg_ik_parent_bone_name)]:
             if bone_name in model.bones:
                 prev_sep_fno = 0
-                links = model.create_link_2_top_one(bone_name)
+                links = model.create_link_2_top_one(bone_name, is_defined=False)
                 fnos = motion.get_bone_fnos(bone_name, root_bone_name)
 
                 # 移植
                 for fno in fnos:
                     root_bf = motion.calc_bf(root_bone_name, fno)
+                    leg_ik_parent_bf = motion.calc_bf(parent_bone_name, fno)
 
                     bf = motion.calc_bf(bone_name, fno)
                     global_3ds_dic = MServiceUtils.calc_global_pos(model, links, motion, fno)
                     bone_global_pos = global_3ds_dic[bone_name]
 
-                    # グローバル位置からの差
+                    # グローバル位置からの差(足IK親があった場合、それも加味して入れてしまう)
                     bf.position = bone_global_pos - model.bones[bone_name].position
 
                     # 回転
-                    bf.rotation = root_bf.rotation * bf.rotation
+                    bf.rotation = root_bf.rotation * leg_ik_parent_bf.rotation * bf.rotation
 
                     motion.regist_bf(bf, bone_name, fno)
 
@@ -166,7 +195,20 @@ class ConvertParentService():
                         prev_sep_fno = fno // 2000
 
         # 全ての親削除
-        del motion.bones[root_bone_name]
+        if root_bone_name in motion.bones:
+            del motion.bones[root_bone_name]
+
+        # センター親削除
+        if center_parent_bone_name in motion.bones:
+            del motion.bones[center_parent_bone_name]
+
+        # 足IK親削除
+        if left_leg_ik_parent_bone_name in motion.bones:
+            del motion.bones[left_leg_ik_parent_bone_name]
+        if right_leg_ik_parent_bone_name in motion.bones:
+            del motion.bones[right_leg_ik_parent_bone_name]
+
+        # logger.info("center_rotatation_flg: %s", self.options.center_rotatation_flg)
 
         if self.options.center_rotatation_flg:
             # センター→上半身・下半身の移植
@@ -178,8 +220,8 @@ class ConvertParentService():
                 upper_bf = motion.calc_bf(upper_bone_name, fno)
                 lower_bf = motion.calc_bf(lower_bone_name, fno)
 
-                center_links = model.create_link_2_top_one(center_bone_name)
-                lower_links = model.create_link_2_top_one(lower_bone_name)
+                center_links = model.create_link_2_top_one(center_bone_name, is_defined=False)
+                lower_links = model.create_link_2_top_one(lower_bone_name, is_defined=False)
 
                 # 一旦移動量を保持
                 center_global_3ds_dic = MServiceUtils.calc_global_pos(model, lower_links, motion, fno, limit_links=center_links)

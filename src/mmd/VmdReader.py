@@ -3,18 +3,22 @@
 import struct
 import hashlib
 import re
-import cython
 
-from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame
-from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
-from utils.MException import MParseException # noqa
+import pyximport
+pyximport.install()
+
+from mmd.PmxData import PmxModel, Bone, OBB, RigidBody
+from mmd.VmdData import VmdMotion, VmdBoneFrame
+from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
+
+from mmd.VmdData import VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame
 from utils.MLogger import MLogger # noqa
-from utils.MException import SizingException, MKilledException
+from utils.MException import SizingException, MKilledException, MParseException
 
 logger = MLogger(__name__)
 
 
-class VmdReader():
+class VmdReader:
     def __init__(self, file_path):
         self.offset = 0
         self.buffer = None
@@ -84,8 +88,6 @@ class VmdReader():
                     # 位置X,Y,Z
                     frame.position = self.read_Vector3D()
                     logger.test("frame.position %s", frame.position)
-                    # オリジナルを保持
-                    frame.org_position = frame.position.copy()
 
                     # 回転X,Y,Z,scalar
                     frame.rotation = self.read_Quaternion()

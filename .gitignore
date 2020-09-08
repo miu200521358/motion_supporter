@@ -38,6 +38,10 @@ build
 dist
 *.zip
 *.log
+*.c
+*.pyd
+*.prof
+*.lprof
 src/model_all_test.py
 VmdSizingSelfAll2.bat
 rivision.txt
@@ -51,5 +55,4 @@ src/VmdSizingForm3.py.bak
 main.prof
 executor.py.lprof
 *.thread
-*.c
-*.pyd
+*.html
