@@ -56,3 +56,5 @@ main.prof
 executor.py.lprof
 *.thread
 *.html
+*.c
+*.pyd

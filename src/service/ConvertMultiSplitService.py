@@ -131,7 +131,13 @@ class ConvertMultiSplitService():
         logger.info("-- 準備完了【%s】", bone_name)
 
         # ローカルX軸
-        local_x_axis = model.get_local_x_axis(bone_name)
+        local_x_axis = model.bones[bone_name].local_x_vector
+        if local_x_axis == MVector3D():
+            # 指定が無い場合、腕系はローカルX軸、それ以外はノーマル
+            if "腕" in bone_name or "ひじ" in bone_name or "手首" in bone_name:
+                local_x_axis = model.get_local_x_axis(bone_name)
+            else:
+                local_x_axis = None
 
         prev_sep_fno = 0
         for fno in range(fnos[-1] + 1):
@@ -139,7 +145,15 @@ class ConvertMultiSplitService():
 
             if model.bones[bone_name].getRotatable():
                 # 回転を分ける
-                x_qq, y_qq, z_qq, _ = MServiceUtils.separate_local_qq(fno, bone_name, bf.rotation, local_x_axis)
+                if local_x_axis:
+                    # ローカルX軸がある場合
+                    x_qq, y_qq, z_qq, _ = MServiceUtils.separate_local_qq(fno, bone_name, bf.rotation, local_x_axis)
+                else:
+                    # ローカルX軸の指定が無い場合、グローバルで分ける
+                    euler = bf.rotation.toEulerAngles()
+                    x_qq = MQuaternion.fromEulerAngles(euler.x(), 0, 0)
+                    y_qq = MQuaternion.fromEulerAngles(0, euler.y(), 0)
+                    z_qq = MQuaternion.fromEulerAngles(0, 0, euler.z())
 
                 if len(rrxbn) > 0:
                     rx_bf = motion.calc_bf(rrxbn, fno)
