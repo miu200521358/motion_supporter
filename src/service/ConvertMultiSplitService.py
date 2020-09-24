@@ -128,7 +128,7 @@ class ConvertMultiSplitService():
                 logger.info("-- %sフレーム目:終了(%s％)【キーフレ追加 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
                 prev_sep_fno = fno // 500
 
-        logger.info("-- 準備完了【%s】", bone_name)
+        logger.info("分割準備完了【%s】", bone_name, decoration=MLogger.DECORATION_LINE)
 
         # ローカルX軸
         local_x_axis = model.bones[bone_name].local_x_vector
@@ -191,36 +191,36 @@ class ConvertMultiSplitService():
                 logger.info("-- %sフレーム目:終了(%s％)【多段分割 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
                 prev_sep_fno = fno // 200
 
-        logger.info("-- 分割完了【%s】", bone_name)
+        logger.info("分割完了【%s】", bone_name, decoration=MLogger.DECORATION_LINE)
 
         # 元のボーン削除
         if rrxbn != bone_name and rrybn != bone_name and rrzbn != bone_name and rmxbn != bone_name and rmybn != bone_name and rmzbn != bone_name:
             del motion.bones[bone_name]
 
-        # 跳ねてるの除去
-        futures = []
-        with ThreadPoolExecutor(thread_name_prefix="smooth", max_workers=self.options.max_workers) as executor:
-            if model.bones[bone_name].getRotatable():
-                if len(rrxbn) > 0:
-                    futures.append(executor.submit(self.smooth_bf, rrxbn))
-                if len(rrybn) > 0:
-                    futures.append(executor.submit(self.smooth_bf, rrybn))
-                if len(rrzbn) > 0:
-                    futures.append(executor.submit(self.smooth_bf, rrzbn))
+        # # 跳ねてるの除去
+        # futures = []
+        # with ThreadPoolExecutor(thread_name_prefix="smooth", max_workers=self.options.max_workers) as executor:
+        #     if model.bones[bone_name].getRotatable():
+        #         if len(rrxbn) > 0:
+        #             futures.append(executor.submit(self.smooth_bf, rrxbn))
+        #         if len(rrybn) > 0:
+        #             futures.append(executor.submit(self.smooth_bf, rrybn))
+        #         if len(rrzbn) > 0:
+        #             futures.append(executor.submit(self.smooth_bf, rrzbn))
 
-            if model.bones[bone_name].getTranslatable():
-                if len(rmxbn) > 0:
-                    futures.append(executor.submit(self.smooth_bf, rmxbn))
-                if len(rmybn) > 0:
-                    futures.append(executor.submit(self.smooth_bf, rmybn))
-                if len(rmzbn) > 0:
-                    futures.append(executor.submit(self.smooth_bf, rmzbn))
+        #     if model.bones[bone_name].getTranslatable():
+        #         if len(rmxbn) > 0:
+        #             futures.append(executor.submit(self.smooth_bf, rmxbn))
+        #         if len(rmybn) > 0:
+        #             futures.append(executor.submit(self.smooth_bf, rmybn))
+        #         if len(rmzbn) > 0:
+        #             futures.append(executor.submit(self.smooth_bf, rmzbn))
 
-        concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
+        # concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
-        for f in futures:
-            if not f.result():
-                return False
+        # for f in futures:
+        #     if not f.result():
+        #         return False
 
         if self.options.remove_unnecessary_flg:
             # 不要キー削除

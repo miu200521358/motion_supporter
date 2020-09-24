@@ -142,7 +142,7 @@ class ConvertNoiseService():
         # 最後に出力
         VmdWriter(MOptionsDataSet(motion, None, self.options.model, output_path, False, False, [], None, 0, [])).write()
 
-        logger.info("出力成功: %s", os.path.basename(output_path))
+        logger.info("出力成功: %s", os.path.basename(output_path), decoration=MLogger.DECORATION_BOX)
 
     # スタンス用細分化
     def prepare_split_stance(self, motion: VmdMotion, target_bone_name: str):
@@ -164,3 +164,5 @@ class ConvertNoiseService():
                     # キーが追加できる状態であれば、追加
                     half_bf = motion.calc_bf(target_bone_name, half_fno)
                     motion.regist_bf(half_bf, target_bone_name, half_fno)
+
+

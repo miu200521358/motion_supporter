@@ -66,6 +66,8 @@ class ConvertLegFKtoIKService():
 
     # 足ＩＫ変換処理実行
     def convert_leg_fk2ik(self, direction: str):
+        logger.info("足ＩＫ変換　【%s足ＩＫ】", direction, decoration=MLogger.DECORATION_LINE)
+
         motion = self.options.motion
         model = self.options.model
 
@@ -97,6 +99,13 @@ class ConvertLegFKtoIKService():
             if fno // 2000 > prev_sep_fno and fnos[-1] > 0:
                 logger.info("-- %sフレーム目:終了(%s％)【準備 - %s】", fno, round((fno / fnos[-1]) * 100, 3), leg_ik_bone_name)
                 prev_sep_fno = fno // 2000
+        
+        if len(fnos) > 0:
+            logger.info("-- %sフレーム目:終了(%s％)【準備 - %s】", fnos[-1], round((fnos[-1] / fnos[-1]) * 100, 3), leg_ik_bone_name)
+
+        logger.info("準備完了　【%s足ＩＫ】", direction, decoration=MLogger.DECORATION_LINE)
+
+        ik_parent_name = ik_links.get(leg_ik_bone_name, offset=-1).name
 
         # 足IKの移植
         prev_sep_fno = 0
@@ -107,11 +116,11 @@ class ConvertLegFKtoIKService():
             _, leg_ik_matrixs = MServiceUtils.calc_global_pos(model, ik_links, motion, fno, return_matrix=True)
 
             # IKの親から見た相対位置
-            leg_ik_parent_matrix = leg_ik_matrixs[ik_links.get(leg_ik_bone_name, offset=-1).name]
+            leg_ik_parent_matrix = leg_ik_matrixs[ik_parent_name]
 
             bf = motion.calc_bf(leg_ik_bone_name, fno)
             # 足ＩＫの位置は、足ＩＫの親から見た足首のローカル位置（足首位置マイナス）
-            bf.position = leg_ik_parent_matrix.inverted() * (leg_fk_3ds_dic[ankle_bone_name] - model.bones[ankle_bone_name].position)
+            bf.position = leg_ik_parent_matrix.inverted() * (leg_fk_3ds_dic[ankle_bone_name] - (model.bones[ankle_bone_name].position - model.bones[ik_parent_name].position))
 
             # 足首の角度がある状態での、つま先までのグローバル位置
             leg_toe_fk_3ds_dic = MServiceUtils.calc_global_pos(model, toe_fk_links, motion, fno)
@@ -134,14 +143,23 @@ class ConvertLegFKtoIKService():
                 logger.info("-- %sフレーム目:終了(%s％)【足ＩＫ変換 - %s】", fno, round((fno / fnos[-1]) * 100, 3), leg_ik_bone_name)
                 prev_sep_fno = fno // 2000
 
+        if len(fnos) > 0:
+            logger.info("-- %sフレーム目:終了(%s％)【足ＩＫ変換 - %s】", fnos[-1], round((fnos[-1] / fnos[-1]) * 100, 3), leg_ik_bone_name)
+
+        logger.info("変換完了　【%s足ＩＫ】", direction, decoration=MLogger.DECORATION_LINE)
+
         # IKon
         for showik in self.options.motion.showiks:
             for ikf in showik.ik:
                 if ikf.name == leg_ik_bone_name or ikf.name == toe_ik_bone_name:
                     ikf.onoff = 1
 
+        # 不要キー削除処理
         if self.options.remove_unnecessary_flg:
             self.options.motion.remove_unnecessary_bf(0, leg_ik_bone_name, self.options.model.bones[leg_ik_bone_name].getRotatable(), \
                                                       self.options.model.bones[leg_ik_bone_name].getTranslatable())
         
         return True
+
+
+

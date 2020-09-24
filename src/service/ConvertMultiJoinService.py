@@ -114,7 +114,7 @@ class ConvertMultiJoinService():
                 logger.info("-- %sフレーム目:終了(%s％)【多段統合 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
                 prev_sep_fno = fno // 500
 
-        logger.info("-- 統合完了【%s】", bone_name)
+        logger.info("統合完了【%s】", bone_name, decoration=MLogger.DECORATION_LINE)
 
         # 元のボーン削除
         if len(rrxbn) > 0 and rrxbn in motion.bones and rrxbn != bone_name:
@@ -130,9 +130,9 @@ class ConvertMultiJoinService():
         if len(rmzbn) > 0 and rmzbn in motion.bones and rmzbn != bone_name:
             del motion.bones[rmzbn]
 
-        # 一旦跳ねてるのを除去
-        self.options.motion.smooth_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
-                                      self.options.model.bones[bone_name].getTranslatable(), limit_degrees=10)
+        # # 一旦跳ねてるのを除去
+        # self.options.motion.smooth_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
+        #                               self.options.model.bones[bone_name].getTranslatable(), limit_degrees=10)
 
         # 不要キー削除
         if self.options.remove_unnecessary_flg:

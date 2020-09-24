@@ -2,8 +2,10 @@
 #
 from datetime import datetime
 import logging
+from logging import DEBUG
 import traceback
 import threading
+import sys
 
 import cython
 
@@ -183,7 +185,7 @@ class MLogger():
                     self.logger.handle(log_record)
                 else:
                     # サイジングスレッドは、printとloggerで分けて出力
-                    print_message(output_msg)
+                    print_message(output_msg, target_level)
                     self.logger.handle(log_record)
             except Exception as e:
                 raise e
@@ -246,5 +248,7 @@ class MLogger():
 
 
 @cython.ccall
-def print_message(msg: str):
-    print(msg)
+def print_message(msg: str, target_level: int):
+    sys.stdout.write("\n" + msg, (target_level < MLogger.INFO))
+
+
