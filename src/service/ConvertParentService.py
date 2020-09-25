@@ -104,7 +104,7 @@ class ConvertParentService():
                         logger.info("-- %sフレーム目:終了(%s％)【準備 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
                         prev_sep_fno = fno // 2000
 
-                if len(fnos) > 0:
+                if len(fnos) > 0 and fnos[-1] > 0:
                     logger.info("-- %sフレーム目:終了(%s％)【準備 - %s】", fnos[-1], round((fnos[-1] / fnos[-1]) * 100, 3), bone_name)
 
         if self.options.center_rotatation_flg:
@@ -121,7 +121,7 @@ class ConvertParentService():
                             logger.info("-- %sフレーム目:終了(%s％)【準備 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
                             prev_sep_fno = fno // 2000
                     
-                    if len(fnos) > 0:
+                    if len(fnos) > 0 and fnos[-1] > 0:
                         logger.info("-- %sフレーム目:終了(%s％)【準備 - %s】", fnos[-1], round((fnos[-1] / fnos[-1]) * 100, 3), bone_name)
 
         for bone_name in [right_leg_ik_bone_name, left_leg_ik_bone_name]:
@@ -137,7 +137,7 @@ class ConvertParentService():
                         logger.info("-- %sフレーム目:終了(%s％)【準備 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
                         prev_sep_fno = fno // 2000
                 
-                if len(fnos) > 0:
+                if len(fnos) > 0 and fnos[-1] > 0:
                     logger.info("-- %sフレーム目:終了(%s％)【準備 - %s】", fnos[-1], round((fnos[-1] / fnos[-1]) * 100, 3), bone_name)
 
         logger.info("移植開始", decoration=MLogger.DECORATION_LINE)
@@ -177,7 +177,7 @@ class ConvertParentService():
                         logger.info("-- %sフレーム目:終了(%s％)【移植 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
                         prev_sep_fno = fno // 2000
 
-                if len(fnos) > 0:
+                if len(fnos) > 0 and fnos[-1] > 0:
                     logger.info("-- %sフレーム目:終了(%s％)【移植 - %s】", fnos[-1], round((fnos[-1] / fnos[-1]) * 100, 3), bone_name)
 
         # 足IKの移植
@@ -208,7 +208,7 @@ class ConvertParentService():
                         logger.info("-- %sフレーム目:終了(%s％)【移植 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
                         prev_sep_fno = fno // 2000
 
-                if len(fnos) > 0:
+                if len(fnos) > 0 and fnos[-1] > 0:
                     logger.info("-- %sフレーム目:終了(%s％)【移植 - %s】", fnos[-1], round((fnos[-1] / fnos[-1]) * 100, 3), bone_name)
 
         # 全ての親削除
@@ -265,7 +265,7 @@ class ConvertParentService():
                     logger.info("-- %sフレーム目:終了(%s％)【移植 - %s】", fno, round((fno / fnos[-1]) * 100, 3), "上半身・下半身")
                     prev_sep_fno = fno // 1000
 
-            if len(fnos) > 0:
+            if len(fnos) > 0 and fnos[-1] > 0:
                 logger.info("-- %sフレーム目:終了(%s％)【移植 - %s】", fnos[-1], round((fnos[-1] / fnos[-1]) * 100, 3), bone_name)
 
         logger.info("移植完了", decoration=MLogger.DECORATION_LINE)

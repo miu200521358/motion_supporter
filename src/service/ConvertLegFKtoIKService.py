@@ -100,7 +100,7 @@ class ConvertLegFKtoIKService():
                 logger.info("-- %sフレーム目:終了(%s％)【準備 - %s】", fno, round((fno / fnos[-1]) * 100, 3), leg_ik_bone_name)
                 prev_sep_fno = fno // 2000
         
-        if len(fnos) > 0:
+        if len(fnos) > 0 and fnos[-1] > 0:
             logger.info("-- %sフレーム目:終了(%s％)【準備 - %s】", fnos[-1], round((fnos[-1] / fnos[-1]) * 100, 3), leg_ik_bone_name)
 
         logger.info("準備完了　【%s足ＩＫ】", direction, decoration=MLogger.DECORATION_LINE)
@@ -143,7 +143,7 @@ class ConvertLegFKtoIKService():
                 logger.info("-- %sフレーム目:終了(%s％)【足ＩＫ変換 - %s】", fno, round((fno / fnos[-1]) * 100, 3), leg_ik_bone_name)
                 prev_sep_fno = fno // 2000
 
-        if len(fnos) > 0:
+        if len(fnos) > 0 and fnos[-1] > 0:
             logger.info("-- %sフレーム目:終了(%s％)【足ＩＫ変換 - %s】", fnos[-1], round((fnos[-1] / fnos[-1]) * 100, 3), leg_ik_bone_name)
 
         logger.info("変換完了　【%s足ＩＫ】", direction, decoration=MLogger.DECORATION_LINE)
