@@ -58,3 +58,4 @@ executor.py.lprof
 *.html
 *.c
 *.pyd
+*.pyd
