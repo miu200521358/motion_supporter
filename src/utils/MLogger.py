@@ -2,7 +2,6 @@
 #
 from datetime import datetime
 import logging
-from logging import DEBUG
 import traceback
 import threading
 import sys
@@ -249,6 +248,6 @@ class MLogger():
 
 @cython.ccall
 def print_message(msg: str, target_level: int):
-    sys.stdout.write("\n" + msg, (target_level < MLogger.INFO))
+    sys.stdout.write(msg + "\n", (target_level < MLogger.INFO))
 
 

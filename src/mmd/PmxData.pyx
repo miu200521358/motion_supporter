@@ -1,16 +1,13 @@
 # -*- coding: utf-8 -*-
 #
 import _pickle as cPickle
+from abc import ABCMeta, abstractmethod
+from collections import OrderedDict
 import math
 import numpy as np
-cimport numpy as np
-cimport libc.math as math
-cimport cython
 
-from libcpp cimport  list, str, int, float, dict
-from module.MMath cimport MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
-from module.MParams cimport BoneLinks
-
+from module.MParams import BoneLinks
+from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from utils.MException import SizingException # noqa
 from utils.MLogger import MLogger # noqa
 
@@ -508,7 +505,7 @@ cdef class OBB:
         self.shape_size_xyz = {"x": self.shape_size.x(), "y": self.shape_size.y(), "z": self.shape_size.z()}
 
     # OBBとの衝突判定
-    cdef tuple get_collistion(self, MVector3D point, MVector3D root_global_pos, float max_length):
+    cpdef tuple get_collistion(self, MVector3D point, MVector3D root_global_pos, float max_length):
         pass
     
 # 球剛体
@@ -517,10 +514,10 @@ cdef class Sphere(OBB):
         super().__init__(*args)
 
     # 衝突しているか
-    cdef tuple get_collistion(self, MVector3D point, MVector3D root_global_pos, float max_length):
+    cpdef tuple get_collistion(self, MVector3D point, MVector3D root_global_pos, float max_length):
         cdef MMatrix4x4 arm_matrix
         cdef bint collision, near_collision
-        cdef float d, sin_x_theta, sin_y_theta, sin_z_theta, x, x_theta, y, y_theta, z, z_theta, x_distance, z_distance, new_y
+        cdef double d, sin_x_theta, sin_y_theta, sin_z_theta, x, x_theta, y, y_theta, z, z_theta, x_distance, z_distance, new_y
         cdef MVector3D local_point, new_x_local, new_z_local, rep_x_collision_vec, rep_z_collision_vec, x_arm_local, z_arm_local
 
         # 原点との距離が半径未満なら衝突
@@ -598,10 +595,10 @@ cdef class Box(OBB):
 
     # 衝突しているか（内外判定）
     # https://stackoverflow.com/questions/21037241/how-to-determine-a-point-is-inside-or-outside-a-cube
-    cdef tuple get_collistion(self, MVector3D point, MVector3D root_global_pos, float max_length):
+    cpdef tuple get_collistion(self, MVector3D point, MVector3D root_global_pos, float max_length):
         cdef MMatrix4x4 arm_matrix
         cdef bint collision, near_collision, res1, res2, res3
-        cdef float d, sin_x_theta, sin_y_theta, sin_z_theta, x_theta, y, y_theta, z_theta, new_y, size1, size2, size3, x, z, x_diff, z_diff, x_distance, z_distance
+        cdef double d, sin_x_theta, sin_y_theta, sin_z_theta, x_theta, y, y_theta, z_theta, new_y, size1, size2, size3, x, z, x_diff, z_diff, x_distance, z_distance
         cdef MVector3D b1,  b2, b4, d1, d2, d3, dir1, dir2, dir3, dir_vec, local_point, new_x_local, new_z_local, rep_x_collision_vec, rep_z_collision_vec, t1
         cdef MVector3D x_arm_local, x_base, z_arm_local, z_base
 
@@ -745,13 +742,13 @@ cdef class Capsule(OBB):
 
     # 衝突しているか
     # http://marupeke296.com/COL_3D_No27_CapsuleCapsule.html
-    cdef tuple get_collistion(self, MVector3D point, MVector3D root_global_pos, float max_length):
+    cpdef tuple get_collistion(self, MVector3D point, MVector3D root_global_pos, float max_length):
         cdef MMatrix4x4 arm_matrix
         cdef bint collision, near_collision
-        cdef float d, sin_x_theta, sin_y_theta, sin_z_theta, x, x_theta, y, y_theta, z, z_theta, x_distance, z_distance, new_y
+        cdef double d, sin_x_theta, sin_y_theta, sin_z_theta, x, x_theta, y, y_theta, z, z_theta, x_distance, z_distance, new_y
         cdef MVector3D local_point, new_x_local, new_z_local, rep_x_collision_vec, rep_z_collision_vec, x_arm_local, z_arm_local
         cdef MVector3D b1, t1, h, v
-        cdef float ba, bb, bc, ta, tb, tc, lensq, t
+        cdef double ba, bb, bc, ta, tb, tc, lensq, t
 
         # 下辺
         b1 = self.rotated_matrix * MVector3D(0, -self.shape_size.y(), 0)

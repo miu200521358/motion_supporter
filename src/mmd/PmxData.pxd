@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 #
-from libcpp cimport  list, str, int, float, dict
 
 from module.MMath cimport MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 
@@ -120,7 +119,7 @@ cdef class OBB:
     cdef public dict origin_xyz
     cdef public dict shape_size_xyz
 
-    cdef tuple get_collistion(self, MVector3D point, MVector3D root_global_pos, float max_length)
+    cpdef tuple get_collistion(self, MVector3D point, MVector3D root_global_pos, float max_length)
 
 cdef class PmxModel:
     cdef public str path

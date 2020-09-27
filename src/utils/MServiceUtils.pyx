@@ -1,23 +1,15 @@
 # -*- coding: utf-8 -*-
 #
-# ccython: profile=True
-# ccython: linetrace=True
-# ccython: binding=True
-# cdistutils: define_macros=CYTHON_TRACE_NOGIL=1
 import numpy as np # noqa
 import math # noqa
 import numpy as np
 cimport numpy as np
-cimport libc.math as cmath
-from libcpp cimport  list, str, dict, float, int
+from libc.math cimport sin, cos, acos, atan2, asin, pi, sqrt
 
-from mmd.PmxData cimport PmxModel, Bone
-from mmd.VmdData cimport VmdMotion, VmdBoneFrame
-from module.MParams cimport BoneLinks # noqa
-from module.MMath cimport MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
-
-from mmd.PmxData import Vertex, Material, Morph, DisplaySlot, RigidBody, Joint # noqa
-from mmd.VmdData import VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
+from module.MParams import BoneLinks # noqa
+from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
+from mmd.PmxData import PmxModel, Bone, Vertex, Material, Morph, DisplaySlot, RigidBody, Joint # noqa
+from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
 from module.MOptions import MOptionsDataSet # noqa
 from utils import MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
@@ -58,14 +50,14 @@ cdef c_calc_IK(PmxModel model, BoneLinks links, VmdMotion motion, int fno, MVect
     cdef MMatrix4x4 inv_coord
     cdef MVector3D basis2_effector
     cdef MVector3D basis2_target
-    cdef float rotation_dot
-    cdef float rotation_radian
+    cdef double rotation_dot
+    cdef double rotation_radian
     cdef MVector3D rotation_axis
-    cdef float rotation_degree
+    cdef double rotation_degree
     cdef MQuaternion correct_qq
     cdef MQuaternion new_ik_qq
     cdef MQuaternion x_qq, y_qq, z_qq, yz_qq
-    cdef float euler_x, euler_y, euler_z
+    cdef double euler_x, euler_y, euler_z
 
     for cnt in range(max_count):
         # 規定回数ループ
@@ -98,7 +90,7 @@ cdef c_calc_IK(PmxModel model, BoneLinks links, VmdMotion motion, int fno, MVect
             # 回転角
             rotation_dot = MVector3D.dotProduct(basis2_effector, basis2_target)
             # 回転角度
-            rotation_radian = cmath.acos(max(-1, min(1, rotation_dot)))
+            rotation_radian = acos(max(-1, min(1, rotation_dot)))
 
             if abs(rotation_radian) > 0.0001:
                 # 一定角度以上の場合
@@ -292,11 +284,8 @@ cdef tuple c_calc_global_pos(PmxModel model, BoneLinks links, VmdMotion motion, 
         # 設定
         matrixs[n] = mm
 
-    cdef dict total_mats
-    cdef dict global_3ds_dic
-
-    total_mats = {}
-    global_3ds_dic = {}
+    cdef dict total_mats = {}
+    cdef dict global_3ds_dic = {}
 
     cdef MMatrix4x4 local_x_matrix
     cdef MVector3D local_axis
@@ -317,11 +306,11 @@ cdef tuple c_calc_global_pos(PmxModel model, BoneLinks links, VmdMotion motion, 
                 mm *= matrixs[m]
         
         # 自分は、位置だけ掛ける
-        global_3ds_dic[lname] = mm.mul_MVector3D(v)
-        
+        global_3ds_dic[lname] = mm * v
+
         # 最後の行列をかけ算する
-        total_mats[lname] = mm.imul_MMatrix4x4(matrixs[n])
-        
+        total_mats[lname] = mm * matrixs[n]
+
         # ローカル軸の向きを調整する
         if n > 0 and is_local_x:
             # ボーン自身にローカル軸が設定されているか

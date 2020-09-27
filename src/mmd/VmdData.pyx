@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
-# 
-# dcython: profile=True
-# dcython: linetrace=True
-# dcython: binding=True
-# ddistutils: define_macros=CYTHON_TRACE_NOGIL=1
+#
 import math
 import numpy as np
 cimport numpy as np
@@ -11,11 +7,12 @@ cimport libc.math as cmath
 from libcpp cimport  list, str, int, float
 import struct
 import _pickle as cPickle
+from libc.math cimport pi, fabs
 
-from module.MMath cimport MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from utils import MBezierUtils # noqa
-from utils cimport MBezierUtils # noqa
 from utils.MLogger import MLogger
+
+from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 
 logger = MLogger(__name__, level=1)
 
@@ -34,17 +31,17 @@ cdef class LowPassFilter:
         self.__y = -1
         self.__s = -1
 
-    cdef __setAlpha(self, float alpha):
-        alpha = max(0.000001, min(1, float(alpha)))
+    cdef __setAlpha(self, double alpha):
+        alpha = max(0.000001, min(1, alpha))
         if alpha <= 0 or alpha > 1.0:
             raise ValueError("alpha (%s) should be in (0.0, 1.0]" % alpha)
         self.__alpha = alpha
 
-    def __call__(self, value: float, timestamp=-1, alpha=-1):
+    def __call__(self, value: double, timestamp=-1, alpha=-1):
         return self.c__call__(value, timestamp, alpha)
 
-    cdef float c__call__(self, float value, float timestamp, float alpha):
-        cdef float s = 0
+    cdef double c__call__(self, double value, double timestamp, double alpha):
+        cdef double s = 0
         if alpha >= 0:
             self.__setAlpha(alpha)
         if self.__y < 0:
@@ -55,18 +52,17 @@ cdef class LowPassFilter:
         self.__s = s
         return s
 
-    cdef float lastValue(self):
+    cdef double lastValue(self):
         return self.__y
 
     # IK用処理スキップ
-    cdef float skip(self, float value):
+    cdef double skip(self, double value):
         self.__y = value
         self.__s = value
 
         return value
 
 
-# ----------------------------------------------------------------------------
 cdef class OneEuroFilter:
 
     def __init__(self, freq, mincutoff=1.0, beta=0.0, dcutoff=1.0):
@@ -76,46 +72,46 @@ cdef class OneEuroFilter:
             raise ValueError("mincutoff should be >0")
         if dcutoff <= 0:
             raise ValueError("dcutoff should be >0")
-        self.__freq = float(freq)
-        self.__mincutoff = float(mincutoff)
-        self.__beta = float(beta)
-        self.__dcutoff = float(dcutoff)
+        self.__freq = freq
+        self.__mincutoff = mincutoff
+        self.__beta = beta
+        self.__dcutoff = dcutoff
         self.__x = LowPassFilter(self.__alpha(self.__mincutoff))
         self.__dx = LowPassFilter(self.__alpha(self.__dcutoff))
         self.__lasttime = -1
 
-    cdef float __alpha(self, float cutoff):
-        cdef float te = 1.0 / self.__freq
-        cdef float tau = 1.0 / (2 * cmath.pi * cutoff)
+    cdef double __alpha(self, double cutoff):
+        cdef double te = 1.0 / self.__freq
+        cdef double tau = 1.0 / (2 * pi * cutoff)
         return 1.0 / (1.0 + tau / te)
 
-    def __call__(self, x: float, timestamp=-1):
+    def __call__(self, x: double, timestamp=-1):
         return self.c__call__(x, timestamp)
 
-    cdef float c__call__(self, float x, float timestamp):
+    cdef double c__call__(self, double x, double timestamp):
         # ---- update the sampling frequency based on timestamps
         if self.__lasttime and timestamp:
             self.__freq = 1.0 / (timestamp - self.__lasttime)
         self.__lasttime = timestamp
         # ---- estimate the current variation per second
-        cdef float prev_x = self.__x.lastValue()
-        cdef float dx = 0.0 if prev_x < 0 else (x - prev_x) * self.__freq  # FIXME: 0.0 or value?
-        cdef float edx = self.__dx(dx, timestamp, alpha=self.__alpha(self.__dcutoff))
+        cdef double prev_x = self.__x.lastValue()
+        cdef double dx = 0.0 if prev_x < 0 else (x - prev_x) * self.__freq  # FIXME: 0.0 or value?
+        cdef double edx = self.__dx(dx, timestamp, alpha=self.__alpha(self.__dcutoff))
         # ---- use it to update the cutoff frequency
-        cdef float cutoff = self.__mincutoff + self.__beta * cmath.fabs(edx)
+        cdef double cutoff = self.__mincutoff + self.__beta * fabs(edx)
         # ---- filter the given value
         return self.__x(x, timestamp, alpha=self.__alpha(cutoff))
 
-    def skip(self, float x, timestamp=-1):
+    def skip(self, double x, timestamp=-1):
         self.c_skip(x, timestamp)
 
     # IK用処理スキップ
-    cdef c_skip(self, float x, str timestamp):
+    cdef c_skip(self, double x, str timestamp):
         # ---- update the sampling frequency based on timestamps
         if self.__lasttime and timestamp and self.__lasttime != timestamp:
             self.__freq = 1.0 / (timestamp - self.__lasttime)
         self.__lasttime = timestamp
-        cdef float prev_x = self.__x.lastValue()
+        cdef double prev_x = self.__x.lastValue()
         self.__dx.skip(prev_x)
         self.__x.skip(x)
 
@@ -128,7 +124,6 @@ cdef class VmdBoneFrame:
         self.fno = fno
         self.position = MVector3D()
         self.rotation = MQuaternion()
-        self.org_position = MVector3D()
         self.org_rotation = MQuaternion()
         self.interpolation = [20, 20, 0, 0, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 20, 20, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 20, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 0, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 0, 0] # noqa
         self.org_interpolation = [20, 20, 0, 0, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 20, 20, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 20, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 0, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 0, 0] # noqa
@@ -149,7 +144,6 @@ cdef class VmdBoneFrame:
         bf.bname = self.bname
         bf.position = self.position.copy()
         bf.rotation = self.rotation.copy()
-        bf.org_position = self.org_position.copy()
         bf.org_rotation = self.org_rotation.copy()
         bf.interpolation = cPickle.loads(cPickle.dumps(self.interpolation, -1))
         bf.key = self.key
@@ -256,7 +250,7 @@ class VmdShadowFrame:
 # VmdShowIkFrame のikの中の要素
 class VmdInfoIk:
     def __init__(self, name='', onoff=0):
-        self.bname = ''
+        self.bname = b''
         self.name = name
         self.onoff = onoff
 
@@ -313,7 +307,7 @@ cdef class VmdMotion:
 
     cdef c_regist_full_bf(self, int data_set_no, list bone_name_list, int offset):
         # 指定された全部のボーンのキーフレ取得
-        fnos = self.get_bone_fnos(*bone_name_list)
+        cdef list fnos = self.get_bone_fnos(*bone_name_list)
 
         if len(fnos) == 0:
             return
@@ -322,6 +316,10 @@ cdef class VmdMotion:
         fnos.extend(x for x in range(fnos[-1])[::offset])
         # 重複を除いて再計算
         fnos = sorted(list(set(fnos)))
+
+        cdef str bone_name
+        cdef int fno, prev_sep_fno
+        cdef VmdBoneFrame bf
 
         # 指定ボーン名でキーフレ登録
         for bone_name in bone_name_list:
@@ -342,8 +340,8 @@ cdef class VmdMotion:
     def get_differ_fnos(self, data_set_no: int, bone_name_list: list, limit_degrees: float, limit_length: float):
         return self.c_get_differ_fnos(data_set_no, bone_name_list, limit_degrees, limit_length)
 
-    cdef list c_get_differ_fnos(self, int data_set_no, list bone_name_list, float limit_degrees, float limit_length):
-        # cdef float limit_radians = cmath.cos(math.radians(limit_degrees))
+    cdef list c_get_differ_fnos(self, int data_set_no, list bone_name_list, double limit_degrees, double limit_length):
+        # cdef double limit_radians = cmath.cos(math.radians(limit_degrees))
         cdef list fnos = [0]
         cdef str bone_name
         cdef int prev_sep_fno = 0
@@ -417,7 +415,7 @@ cdef class VmdMotion:
     def smooth_bf(self, data_set_no: int, bone_name: str, is_rot: bint, is_mov: bint, limit_degrees: float, start_fno=-1, end_fno=-1, is_show_log=True):
         self.c_smooth_bf(data_set_no, bone_name, is_rot, is_mov, limit_degrees, start_fno, end_fno, is_show_log)
 
-    cdef c_smooth_bf(self, int data_set_no, str bone_name, bint is_rot, bint is_mov, float limit_degrees, int start_fno, int end_fno, bint is_show_log):
+    cdef c_smooth_bf(self, int data_set_no, str bone_name, bint is_rot, bint is_mov, double limit_degrees, int start_fno, int end_fno, bint is_show_log):
         cdef list fnos
 
         # キーフレを取得する
@@ -428,7 +426,7 @@ cdef class VmdMotion:
             # 範囲指定がある場合はその範囲内だけ
             fnos = self.get_bone_fnos(bone_name, start_fno=start_fno, end_fno=end_fno)
         
-        cdef float limit_radians = math.radians(limit_degrees)
+        cdef double limit_radians = math.radians(limit_degrees)
 
         cdef int prev_sep_fno = 0
         cdef int fno
@@ -481,12 +479,12 @@ cdef class VmdMotion:
         cdef list fnos
         cdef prev_sep_fno = 0
         cdef VmdBoneFrame now_bf
-        cdef float px
-        cdef float py
-        cdef float pz
-        cdef float rx
-        cdef float ry
-        cdef float rz
+        cdef double px
+        cdef double py
+        cdef double pz
+        cdef double rx
+        cdef double ry
+        cdef double rz
         cdef MVector3D r
         cdef MQuaternion new_qq
 
@@ -557,7 +555,7 @@ cdef class VmdMotion:
     # 変曲点を求める
     # https://teratail.com/questions/162391
     cdef c_remove_unnecessary_bf(self, int data_set_no, str bone_name, bint is_rot, bint is_mov, \
-                                 float offset, float rot_diff_limit, float mov_diff_limit, int r_start_fno, int r_end_fno, bint is_show_log, bint is_force):
+                                 double offset, double rot_diff_limit, double mov_diff_limit, int r_start_fno, int r_end_fno, bint is_show_log, bint is_force):
         cdef int prev_sep_fno = 0
         cdef list fnos
 
@@ -864,7 +862,6 @@ cdef class VmdMotion:
         cdef VmdBoneFrame regist_bf = self.c_calc_bf(bone_name, fno, is_key=False, is_read=False, is_reset_interpolation=True)
         regist_bf.position = bf.position.copy()
         regist_bf.rotation = bf.rotation.copy()
-        regist_bf.org_position = bf.org_position.copy()
         regist_bf.org_rotation = bf.org_rotation.copy()
         if copy_interpolation:
             regist_bf.interpolation = cPickle.loads(cPickle.dumps(bf.interpolation, -1))
@@ -888,7 +885,7 @@ cdef class VmdMotion:
         # return cfun(bone_name, fno, is_key, is_read, is_reset_interpolation)
         return self.c_calc_bf(bone_name, fno, is_key, is_read, is_reset_interpolation)
 
-    cpdef VmdBoneFrame c_calc_bf(self, str bone_name, int fno, bint is_key, bint is_read, bint is_reset_interpolation):
+    cdef VmdBoneFrame c_calc_bf(self, str bone_name, int fno, bint is_key, bint is_read, bint is_reset_interpolation):
         cdef VmdBoneFrame fill_bf = VmdBoneFrame(fno)
 
         if bone_name not in self.bones:
@@ -985,8 +982,8 @@ cdef class VmdMotion:
         return fill_bf
 
     # 補間曲線を元に、回転ボーンの値を求める
-    cpdef MQuaternion calc_bf_rot(self, VmdBoneFrame prev_bf, VmdBoneFrame fill_bf, VmdBoneFrame next_bf):
-        cdef float rx, ry, rt
+    cdef MQuaternion calc_bf_rot(self, VmdBoneFrame prev_bf, VmdBoneFrame fill_bf, VmdBoneFrame next_bf):
+        cdef double rx, ry, rt
 
         if prev_bf.rotation != next_bf.rotation:
             # 回転補間曲線
@@ -998,8 +995,8 @@ cdef class VmdMotion:
         return prev_bf.rotation.copy()
 
     # 補間曲線を元に移動ボーンの値を求める
-    cpdef MVector3D calc_bf_pos(self, VmdBoneFrame prev_bf, VmdBoneFrame fill_bf, VmdBoneFrame next_bf):
-        cdef float xx, xy, xt, yx, yy, yt, zx, zy, zt
+    cdef MVector3D calc_bf_pos(self, VmdBoneFrame prev_bf, VmdBoneFrame fill_bf, VmdBoneFrame next_bf):
+        cdef double xx, xy, xt, yx, yy, yt, zx, zy, zt
         cdef MVector3D fill_pos
 
         # 補間曲線を元に間を埋める
@@ -1028,7 +1025,7 @@ cdef class VmdMotion:
         return prev_bf.position.copy()
     
     # キーフレを指定されたフレーム番号の前後で分割する
-    cpdef bint split_bf_by_fno(self, str target_bone_name, VmdBoneFrame prev_bf, VmdBoneFrame next_bf, int fill_fno):
+    cdef bint split_bf_by_fno(self, str target_bone_name, VmdBoneFrame prev_bf, VmdBoneFrame next_bf, int fill_fno):
         if not (prev_bf.fno < fill_fno < next_bf.fno):
             # 間の分割が出来ない場合、終了
             return False
@@ -1048,7 +1045,7 @@ cdef class VmdMotion:
         return fill_result
 
     # キーフレを移動量の中心で分割する
-    cpdef bint split_bf(self, str target_bone_name, VmdBoneFrame prev_bf, VmdBoneFrame next_bf):
+    cdef bint split_bf(self, str target_bone_name, VmdBoneFrame prev_bf, VmdBoneFrame next_bf):
         if prev_bf.fno == next_bf.fno:
             # 間の分割が出来ない場合、終了
             return True
@@ -1085,7 +1082,7 @@ cdef class VmdMotion:
     
     # キーフレを指定bf間の中間で区切れるフレーム番号を取得する
     # 分割が不要（範囲内に収まってる）場合、-1で対象外
-    cpdef int get_split_fill_fno(self, str target_bone_name, VmdBoneFrame prev_bf, VmdBoneFrame next_bf, \
+    cdef int get_split_fill_fno(self, str target_bone_name, VmdBoneFrame prev_bf, VmdBoneFrame next_bf, \
                                  list x1_idxs, list y1_idxs, list x2_idxs, list y2_idxs):
         cdef int next_x1v = next_bf.interpolation[x1_idxs[3]]
         cdef int next_y1v = next_bf.interpolation[y1_idxs[3]]
@@ -1104,7 +1101,7 @@ cdef class VmdMotion:
         return -1
 
     # 補間曲線の再設定処理
-    cpdef reset_interpolation(self, str target_bone_name, VmdBoneFrame prev_bf, VmdBoneFrame now_bf, VmdBoneFrame next_bf, \
+    cdef reset_interpolation(self, str target_bone_name, VmdBoneFrame prev_bf, VmdBoneFrame now_bf, VmdBoneFrame next_bf, \
                               list before_bz, list after_bz, list x1_idxs, list y1_idxs, list x2_idxs, list y2_idxs):
         
         # 今回キーに設定
@@ -1131,7 +1128,7 @@ cdef class VmdMotion:
             = org_interpolation[bz_y2_idxs[3]]
 
     # 補間曲線の再設定部品
-    cpdef reset_interpolation_parts(self, str target_bone_name, VmdBoneFrame bf, list bzs, list x1_idxs, list y1_idxs, list x2_idxs, list y2_idxs):
+    cdef reset_interpolation_parts(self, str target_bone_name, VmdBoneFrame bf, list bzs, list x1_idxs, list y1_idxs, list x2_idxs, list y2_idxs):
         # キーの始点は、B
         bf.interpolation[x1_idxs[0]] = bf.interpolation[x1_idxs[1]] = bf.interpolation[x1_idxs[2]] = bf.interpolation[x1_idxs[3]] = int(bzs[1].x())
         bf.interpolation[y1_idxs[0]] = bf.interpolation[y1_idxs[1]] = bf.interpolation[y1_idxs[2]] = bf.interpolation[y1_idxs[3]] = int(bzs[1].y())
@@ -1214,7 +1211,8 @@ cdef class VmdMotion:
 
         for bone_name, bone_frames in self.bones.items():
             if bone_name not in ["SIZING_ROOT_BONE", "頭頂", "右つま先実体", "左つま先実体", "右足底辺", "左足底辺", "右足底実体", "左足底実体", "右足ＩＫ底実体", "左足ＩＫ底実体", "右足IK親底実体", "左足IK親底実体", \
-                                 "首根元", "右腕下延長", "左腕下延長", "右腕垂直", "左腕垂直", "センター実体", "左腕ひじ中間", "右腕ひじ中間", "左ひじ手首中間", "右ひじ手首中間", "左手首実体", "右手首実体"]:
+                                 "首根元", "右腕下延長", "左腕下延長", "右腕垂直", "左腕垂直", "センター実体", "左腕ひじ中間", "右腕ひじ中間", "左ひじ手首中間", "右ひじ手首中間", "左手首実体", "右手首実体", \
+                                 "左親指先実体", "左人指先実体", "左中指先実体", "左薬指先実体", "左小指先実体", "右親指先実体", "右人指先実体", "右中指先実体", "右薬指先実体", "右小指先実体"]:
                 # サイジング用ボーンは出力しない
                 target_fnos[bone_name] = self.get_bone_fnos(bone_name, is_key=True)
 

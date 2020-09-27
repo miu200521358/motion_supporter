@@ -4,14 +4,8 @@ import struct
 import hashlib
 import re
 
-import pyximport
-pyximport.install()
-
-from mmd.PmxData import PmxModel, Bone, OBB, RigidBody
-from mmd.VmdData import VmdMotion, VmdBoneFrame
-from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
-
-from mmd.VmdData import VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame
+from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame
+from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from utils.MLogger import MLogger # noqa
 from utils.MException import SizingException, MKilledException, MParseException
 
@@ -99,9 +93,6 @@ class VmdReader:
                     # 補間曲線
                     frame.interpolation = list(self.unpack(64, "64B", True))
                     logger.test("interpolation %s", frame.interpolation)
-                    # オリジナルの補間曲線を保持しておく
-                    # frame.org_interpolation = copy.deepcopy(frame.interpolation)
-                    # logger.test("org_interpolation %s", frame.org_interpolation)
 
                     if bone_name not in motion.bones:
                         # まだ辞書にない場合、配列追加
@@ -291,8 +282,8 @@ class VmdReader:
 
                             # IK名
                             ik_bname, ik_name = self.read_text(20)
-                            ik_info.bname = ik_bname
                             ik_info.name = ik_name
+                            ik_info.bname = ik_bname
                             logger.test("ik_info.name %s", ik_name)
 
                             # モデル表示, 0:OFF, 1:ON
