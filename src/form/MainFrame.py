@@ -10,6 +10,9 @@ from form.panel.MultiSplitPanel import MultiSplitPanel
 from form.panel.MultiJoinPanel import MultiJoinPanel
 from form.panel.ArmIKtoFKPanel import ArmIKtoFKPanel
 from form.panel.LegFKtoIKPanel import LegFKtoIKPanel
+from form.panel.BlendPanel import BlendPanel
+from form.panel.BezierPanel import BezierPanel
+from form.panel.SmoothPanel import SmoothPanel
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from utils import MFormUtils, MFileUtils # noqa
 from utils.MLogger import MLogger # noqa
@@ -91,7 +94,19 @@ class MainFrame(wx.Frame):
         # 足FK2FKタブ
         self.leg_fk2ik_panel_ctrl = LegFKtoIKPanel(self, self.note_ctrl, 9)
         self.note_ctrl.AddPage(self.leg_fk2ik_panel_ctrl, u"足FKtoIK", False)
-        
+
+        # スムーズタブ
+        self.smooth_panel_ctrl = SmoothPanel(self, self.note_ctrl, 5)
+        self.note_ctrl.AddPage(self.smooth_panel_ctrl, u"スムーズ", False)
+
+        # ブレンドタブ
+        self.blend_panel_ctrl = BlendPanel(self, self.note_ctrl, 6)
+        self.note_ctrl.AddPage(self.blend_panel_ctrl, u"ブレンド", False)
+
+        # 補間タブ
+        self.bezier_panel_ctrl = BezierPanel(self, self.note_ctrl, 9)
+        self.note_ctrl.AddPage(self.bezier_panel_ctrl, u"補間", False)
+                
         # # 腕IKtoFKタブ
         # self.arm_ik2fk_panel_ctrl = ArmIKtoFKPanel(self, self.note_ctrl, 9)
         # self.note_ctrl.AddPage(self.arm_ik2fk_panel_ctrl, u"腕IKtoFK", False)
@@ -120,6 +135,16 @@ class MainFrame(wx.Frame):
 
         if self.parent_panel_ctrl.is_fix_tab:
             self.note_ctrl.ChangeSelection(self.parent_panel_ctrl.tab_idx)
+            event.Skip()
+            return
+
+        elif self.smooth_panel_ctrl.is_fix_tab:
+            self.note_ctrl.ChangeSelection(self.smooth_panel_ctrl.tab_idx)
+            event.Skip()
+            return
+
+        elif self.blend_panel_ctrl.is_fix_tab:
+            self.note_ctrl.ChangeSelection(self.blend_panel_ctrl.tab_idx)
             event.Skip()
             return
 

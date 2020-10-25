@@ -137,7 +137,7 @@ class ConvertMultiJoinService():
         # 不要キー削除
         if self.options.remove_unnecessary_flg:
             self.options.motion.remove_unnecessary_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
-                                                      self.options.model.bones[bone_name].getTranslatable(), rot_diff_limit=0.001, mov_diff_limit=0.01)
+                                                      self.options.model.bones[bone_name].getTranslatable())
         
         return True
 

@@ -11,6 +11,8 @@ def get_ext():
     sources = ["module\\MMath.pyx", "module\\MOptions.pyx", "module\\MParams.pyx", \
                "utils\\MLogger.py", "utils\\MBezierUtils.pyx", "utils\\MServiceUtils.pyx", \
                "mmd\\VmdData.pyx", "mmd\\VmdReader.py", "mmd\\PmxData.pyx", "mmd\\PmxReader.py"]
+            #    "service\\ConvertMultiSplitService.py", "service\\ConvertMultiJoinService.py", "service\\ConvertParentService.py", \
+            #    "service\\ConvertLegFKtoIKService.py", "service\\ConvertNoiseService.py"]
     # for path in glob.glob("*/**/*.pyx", recursive=True):
     #     if os.path.isfile(path):
     #         print(path)

@@ -14,8 +14,8 @@ logger = MLogger(__name__)
 
 class TargetBoneDialog(wx.Dialog):
 
-    def __init__(self, frame: wx.Frame, panel: wx.Panel, direction: str):
-        super().__init__(frame, id=wx.ID_ANY, title="分割ボーン指定", pos=(-1, -1), size=(700, 450), style=wx.DEFAULT_DIALOG_STYLE, name="TargetBoneDialog")
+    def __init__(self, frame: wx.Frame, panel: wx.Panel, direction: str, type: str):
+        super().__init__(frame, id=wx.ID_ANY, title="{0}ボーン指定".format(type), pos=(-1, -1), size=(700, 450), style=wx.DEFAULT_DIALOG_STYLE, name="TargetBoneDialog")
 
         self.frame = frame
         self.panel = panel
@@ -35,7 +35,8 @@ class TargetBoneDialog(wx.Dialog):
         self.sizer = wx.BoxSizer(wx.VERTICAL)
 
         # 説明文
-        self.description_txt = wx.StaticText(self, wx.ID_ANY, u"多段分割したいボーン名を選択してください。", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.description_txt = wx.StaticText(self, wx.ID_ANY, u"多段{0}したいボーン名を選択・入力してください。プルダウン欄にボーン名の一部を入力して絞り込みをかける事ができます。\n" \
+                                             + "プルダウン欄にボーン名を入力した場合、変換ENTERの後、もう一度ENTERを押すと、移動・回転の各ボーンに同ボーン名が入ります。".format(type), wx.DefaultPosition, wx.DefaultSize, 0)
         self.sizer.Add(self.description_txt, 0, wx.ALL, 5)
 
         # ボタン
@@ -48,19 +49,19 @@ class TargetBoneDialog(wx.Dialog):
 
         # インポートボタン
         self.import_btn_ctrl = wx.Button(self, wx.ID_ANY, u"インポート ...", wx.DefaultPosition, wx.DefaultSize, 0)
-        self.import_btn_ctrl.SetToolTip(u"ボーン分割データをCSVファイルから読み込みます。\nファイル選択ダイアログが開きます。")
+        self.import_btn_ctrl.SetToolTip(u"ボーンデータをCSVファイルから読み込みます。\nファイル選択ダイアログが開きます。")
         self.import_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_import)
         self.btn_sizer.Add(self.import_btn_ctrl, 0, wx.ALL, 5)
 
         # エクスポートボタン
         self.export_btn_ctrl = wx.Button(self, wx.ID_ANY, u"エクスポート ...", wx.DefaultPosition, wx.DefaultSize, 0)
-        self.export_btn_ctrl.SetToolTip(u"ボーン分割データをCSVファイルに出力します。\n調整対象VMDと同じフォルダに出力します。")
+        self.export_btn_ctrl.SetToolTip(u"ボーンデータをCSVファイルに出力します。\n調整対象VMDと同じフォルダに出力します。")
         self.export_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_export)
         self.btn_sizer.Add(self.export_btn_ctrl, 0, wx.ALL, 5)
 
         # 行追加ボタン
         self.add_line_btn_ctrl = wx.Button(self, wx.ID_ANY, u"行追加", wx.DefaultPosition, wx.DefaultSize, 0)
-        self.add_line_btn_ctrl.SetToolTip(u"ボーン分割の組み合わせ行を追加します。\n上限はありません。")
+        self.add_line_btn_ctrl.SetToolTip(u"ボーン{0}の組み合わせ行を追加します。\n上限はありません。".format(type))
         self.add_line_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_add_line)
         self.btn_sizer.Add(self.add_line_btn_ctrl, 0, wx.ALL, 5)
 
@@ -164,6 +165,9 @@ class TargetBoneDialog(wx.Dialog):
 
                     if len(bone_lines) == 0:
                         return
+
+                    if not bone_lines[0]:
+                        raise Exception("処理対象ボーン名指定なし")
 
                     org_choice_values = bone_lines[0]
                     if len(bone_lines) >= 4:
@@ -292,8 +296,9 @@ class TargetBoneDialog(wx.Dialog):
 
     def add_line(self, midx=0):
         # 置換前ボーン
-        self.org_choices.append(wx.ComboBox(self.window, id=wx.ID_ANY, choices=self.org_bones, style=wx.CB_DROPDOWN))
+        self.org_choices.append(wx.ComboBox(self.window, id=wx.ID_ANY, choices=self.org_bones, style=wx.CB_DROPDOWN | wx.TE_PROCESS_ENTER))
         self.org_choices[-1].Bind(wx.EVT_COMBOBOX, lambda event: self.on_change_choice(event, midx))
+        self.org_choices[-1].Bind(wx.EVT_TEXT_ENTER, lambda event: self.on_enter_choice(event, midx))
         self.grid_sizer.Add(self.org_choices[-1], 0, wx.ALL, 5)
 
         # 矢印
@@ -302,33 +307,39 @@ class TargetBoneDialog(wx.Dialog):
         self.grid_sizer.Add(self.arrow_txt, 0, wx.CENTER | wx.ALL, 5)
 
         # 置換後ボーン(RX)
-        self.rep_rx_choices.append(wx.ComboBox(self.window, id=wx.ID_ANY, choices=self.rep_bones, style=wx.CB_DROPDOWN))
+        self.rep_rx_choices.append(wx.ComboBox(self.window, id=wx.ID_ANY, choices=self.rep_bones, style=wx.CB_DROPDOWN | wx.TE_PROCESS_ENTER))
         self.rep_rx_choices[-1].Bind(wx.EVT_COMBOBOX, lambda event: self.on_change_choice(event, midx))
+        self.rep_rx_choices[-1].Bind(wx.EVT_TEXT_ENTER, lambda event: self.on_enter_choice(event, midx))
         self.grid_sizer.Add(self.rep_rx_choices[-1], 0, wx.ALL, 5)
 
         # 置換後ボーン(RY)
-        self.rep_ry_choices.append(wx.ComboBox(self.window, id=wx.ID_ANY, choices=self.rep_bones, style=wx.CB_DROPDOWN))
+        self.rep_ry_choices.append(wx.ComboBox(self.window, id=wx.ID_ANY, choices=self.rep_bones, style=wx.CB_DROPDOWN | wx.TE_PROCESS_ENTER))
         self.rep_ry_choices[-1].Bind(wx.EVT_COMBOBOX, lambda event: self.on_change_choice(event, midx))
+        self.rep_ry_choices[-1].Bind(wx.EVT_TEXT_ENTER, lambda event: self.on_enter_choice(event, midx))
         self.grid_sizer.Add(self.rep_ry_choices[-1], 0, wx.ALL, 5)
 
         # 置換後ボーン(RZ)
-        self.rep_rz_choices.append(wx.ComboBox(self.window, id=wx.ID_ANY, choices=self.rep_bones, style=wx.CB_DROPDOWN))
+        self.rep_rz_choices.append(wx.ComboBox(self.window, id=wx.ID_ANY, choices=self.rep_bones, style=wx.CB_DROPDOWN | wx.TE_PROCESS_ENTER))
         self.rep_rz_choices[-1].Bind(wx.EVT_COMBOBOX, lambda event: self.on_change_choice(event, midx))
+        self.rep_rz_choices[-1].Bind(wx.EVT_TEXT_ENTER, lambda event: self.on_enter_choice(event, midx))
         self.grid_sizer.Add(self.rep_rz_choices[-1], 0, wx.ALL, 5)
 
         # 置換後ボーン(MX)
-        self.rep_mx_choices.append(wx.ComboBox(self.window, id=wx.ID_ANY, choices=self.rep_bones, style=wx.CB_DROPDOWN))
+        self.rep_mx_choices.append(wx.ComboBox(self.window, id=wx.ID_ANY, choices=self.rep_bones, style=wx.CB_DROPDOWN | wx.TE_PROCESS_ENTER))
         self.rep_mx_choices[-1].Bind(wx.EVT_COMBOBOX, lambda event: self.on_change_choice(event, midx))
+        self.rep_mx_choices[-1].Bind(wx.EVT_TEXT_ENTER, lambda event: self.on_enter_choice(event, midx))
         self.grid_sizer.Add(self.rep_mx_choices[-1], 0, wx.ALL, 5)
 
         # 置換後ボーン(MY)
-        self.rep_my_choices.append(wx.ComboBox(self.window, id=wx.ID_ANY, choices=self.rep_bones, style=wx.CB_DROPDOWN))
+        self.rep_my_choices.append(wx.ComboBox(self.window, id=wx.ID_ANY, choices=self.rep_bones, style=wx.CB_DROPDOWN | wx.TE_PROCESS_ENTER))
         self.rep_my_choices[-1].Bind(wx.EVT_COMBOBOX, lambda event: self.on_change_choice(event, midx))
+        self.rep_my_choices[-1].Bind(wx.EVT_TEXT_ENTER, lambda event: self.on_enter_choice(event, midx))
         self.grid_sizer.Add(self.rep_my_choices[-1], 0, wx.ALL, 5)
 
         # 置換後ボーン(MZ)
-        self.rep_mz_choices.append(wx.ComboBox(self.window, id=wx.ID_ANY, choices=self.rep_bones, style=wx.CB_DROPDOWN))
+        self.rep_mz_choices.append(wx.ComboBox(self.window, id=wx.ID_ANY, choices=self.rep_bones, style=wx.CB_DROPDOWN | wx.TE_PROCESS_ENTER))
         self.rep_mz_choices[-1].Bind(wx.EVT_COMBOBOX, lambda event: self.on_change_choice(event, midx))
+        self.rep_mz_choices[-1].Bind(wx.EVT_TEXT_ENTER, lambda event: self.on_enter_choice(event, midx))
         self.grid_sizer.Add(self.rep_mz_choices[-1], 0, wx.ALL, 5)
 
         # スクロールバーの表示のためにサイズ調整
@@ -346,13 +357,21 @@ class TargetBoneDialog(wx.Dialog):
 
         # どれも設定されていなければFalse
         return False
+    
+    # 文字列が入力された際、一致しているのがあれば適用
+    def on_enter_choice(self, event: wx.Event, midx: int):
+        idx = event.GetEventObject().FindString(event.GetEventObject().GetValue())
+        if idx >= 0:
+            event.GetEventObject().SetSelection(idx)
+            self.on_change_choice(event, midx)
 
+    # 選択肢が変更された場合
     def on_change_choice(self, event: wx.Event, midx: int):
         text = event.GetEventObject().GetStringSelection()
 
         # 同じ選択肢を初期設定
         if len(self.org_choices[midx].GetValue()) == 0 or len(text) == 0:
-            self.org_choices[midx].SetValue(text)
+            self.org_choices[midx].ChangeValue(text)
             cidx = self.org_choices[midx].FindString(text)
             if cidx >= 0:
                 self.org_choices[midx].SetSelection(cidx)
@@ -363,19 +382,19 @@ class TargetBoneDialog(wx.Dialog):
             if bone_data.getTranslatable():
                 # 移動ボーン
                 if len(self.rep_mx_choices[midx].GetValue()) == 0:
-                    self.rep_mx_choices[midx].SetValue(text)
+                    self.rep_mx_choices[midx].ChangeValue(text)
                     cidx = self.rep_mx_choices[midx].FindString(text)
                     if cidx >= 0:
                         self.rep_mx_choices[midx].SetSelection(cidx)
 
                 if len(self.rep_my_choices[midx].GetValue()) == 0:
-                    self.rep_my_choices[midx].SetValue(text)
+                    self.rep_my_choices[midx].ChangeValue(text)
                     cidx = self.rep_my_choices[midx].FindString(text)
                     if cidx >= 0:
                         self.rep_my_choices[midx].SetSelection(cidx)
 
                 if len(self.rep_mz_choices[midx].GetValue()) == 0:
-                    self.rep_mz_choices[midx].SetValue(text)
+                    self.rep_mz_choices[midx].ChangeValue(text)
                     cidx = self.rep_mz_choices[midx].FindString(text)
                     if cidx >= 0:
                         self.rep_mz_choices[midx].SetSelection(cidx)
@@ -383,38 +402,38 @@ class TargetBoneDialog(wx.Dialog):
             if bone_data.getRotatable():
                 # 回転ボーン
                 if len(self.rep_rx_choices[midx].GetValue()) == 0:
-                    self.rep_rx_choices[midx].SetValue(text)
+                    self.rep_rx_choices[midx].ChangeValue(text)
                     cidx = self.rep_rx_choices[midx].FindString(text)
                     if cidx >= 0:
                         self.rep_rx_choices[midx].SetSelection(cidx)
 
                 if len(self.rep_ry_choices[midx].GetValue()) == 0:
-                    self.rep_ry_choices[midx].SetValue(text)
+                    self.rep_ry_choices[midx].ChangeValue(text)
                     cidx = self.rep_ry_choices[midx].FindString(text)
                     if cidx >= 0:
                         self.rep_ry_choices[midx].SetSelection(cidx)
 
                 if len(self.rep_rz_choices[midx].GetValue()) == 0:
-                    self.rep_rz_choices[midx].SetValue(text)
+                    self.rep_rz_choices[midx].ChangeValue(text)
                     cidx = self.rep_rz_choices[midx].FindString(text)
                     if cidx >= 0:
                         self.rep_rz_choices[midx].SetSelection(cidx)
 
         elif len(text) == 0:
             # 空にした場合は空に
-            self.org_choices[midx].SetValue("")
+            self.org_choices[midx].ChangeValue("")
             self.org_choices[midx].SetSelection(-1)
-            self.rep_mx_choices[midx].SetValue("")
+            self.rep_mx_choices[midx].ChangeValue("")
             self.rep_mx_choices[midx].SetSelection(-1)
-            self.rep_my_choices[midx].SetValue("")
+            self.rep_my_choices[midx].ChangeValue("")
             self.rep_my_choices[midx].SetSelection(-1)
-            self.rep_mz_choices[midx].SetValue("")
+            self.rep_mz_choices[midx].ChangeValue("")
             self.rep_mz_choices[midx].SetSelection(-1)
-            self.rep_rx_choices[midx].SetValue("")
+            self.rep_rx_choices[midx].ChangeValue("")
             self.rep_rx_choices[midx].SetSelection(-1)
-            self.rep_ry_choices[midx].SetValue("")
+            self.rep_ry_choices[midx].ChangeValue("")
             self.rep_ry_choices[midx].SetSelection(-1)
-            self.rep_rz_choices[midx].SetValue("")
+            self.rep_rz_choices[midx].ChangeValue("")
             self.rep_rz_choices[midx].SetSelection(-1)
 
         # 最後である場合、行追加

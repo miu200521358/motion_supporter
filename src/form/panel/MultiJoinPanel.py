@@ -80,6 +80,7 @@ class MultiJoinPanel(BasePanel):
         self.flg_sizer = wx.BoxSizer(wx.VERTICAL)
         self.remove_unnecessary_flg_ctrl = wx.CheckBox(self, wx.ID_ANY, u"不要キー削除処理を追加実行する", wx.DefaultPosition, wx.DefaultSize, 0)
         self.remove_unnecessary_flg_ctrl.SetToolTip(u"チェックを入れると、不要キー削除処理を追加で実行します。キーが減る分、キー間が少しズレる事があります。")
+        self.remove_unnecessary_flg_ctrl.Bind(wx.EVT_CHECKBOX, self.on_change_file)
         self.flg_sizer.Add(self.remove_unnecessary_flg_ctrl, 0, wx.ALL, 5)
         self.sizer.Add(self.flg_sizer, 0, wx.EXPAND | wx.ALL, 5)
 
@@ -110,7 +111,7 @@ class MultiJoinPanel(BasePanel):
         self.fit()
 
         # ボーン選択用ダイアログ
-        self.bone_dialog = TargetBoneDialog(self.frame, self, "←")
+        self.bone_dialog = TargetBoneDialog(self.frame, self, "←", "分割")
 
         # フレームに変換完了処理バインド
         self.frame.Bind(EVT_SMOOTH_THREAD, self.on_convert_multi_join_result)
@@ -133,7 +134,7 @@ class MultiJoinPanel(BasePanel):
             self.bone_target_txt_ctrl.SetValue("")
             # ボーン選択用ダイアログ
             self.bone_dialog.Destroy()
-            self.bone_dialog = TargetBoneDialog(self.frame, self, "←")
+            self.bone_dialog = TargetBoneDialog(self.frame, self, "←", "統合")
             self.bone_dialog.initialize()
         else:
             if not self.vmd_file_ctrl.data or not self.model_file_ctrl.data:

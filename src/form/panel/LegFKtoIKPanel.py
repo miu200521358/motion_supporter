@@ -59,6 +59,7 @@ class LegFKtoIKPanel(BasePanel):
         # 不要キー削除処理
         self.remove_unnecessary_flg_ctrl = wx.CheckBox(self, wx.ID_ANY, u"不要キー削除処理を追加実行する", wx.DefaultPosition, wx.DefaultSize, 0)
         self.remove_unnecessary_flg_ctrl.SetToolTip(u"チェックを入れると、不要キー削除処理を追加で実行します。キーが減る分、キー間が少しズレる事があります。")
+        self.remove_unnecessary_flg_ctrl.Bind(wx.EVT_CHECKBOX, self.on_change_file)
         self.header_sizer.Add(self.remove_unnecessary_flg_ctrl, 0, wx.ALL, 5)
 
         self.sizer.Add(self.header_sizer, 0, wx.EXPAND | wx.ALL, 5)
