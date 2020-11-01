@@ -133,7 +133,7 @@ class ConvertNoiseService():
                 prev_fno = fno
 
                 if fno // 2000 > prev_sep_fno and fnos[-1] > 0:
-                    logger.info("-- %sフレーム目:終了(%s％)【No.%s - %s】", fno, round((fno / fnos[-1]) * 100, 3), copy_no + 1, bone_name)
+                    logger.count(f"【No.{copy_no + 1} - {bone_name}】", fno, fnos)
                     prev_sep_fno = fno // 2000
 
         output_path = self.options.output_path.replace("nxxx", "n{0:03d}".format(copy_no + 1))

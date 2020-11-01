@@ -284,7 +284,7 @@ class ConvertSmoothService():
                     self.options.motion.regist_bf(target_bf, bone_name, fno)
 
                     if fno // 500 > prev_sep_fno and fnos[-1] > 0:
-                        logger.info("-- %sフレーム目:終了(%s％) %s", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
+                        logger.count(f"【スムージング - {bone_name}】", fno, fnos)
                         prev_sep_fno = fno // 500
                         
             logger.info("【スムージング1回目】%s 終了", bone_name)

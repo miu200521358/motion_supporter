@@ -143,7 +143,7 @@ class ConvertArmIKtoFKService():
                 motion.regist_bf(bf, link_name, fno)
 
             if fno // 500 > prev_sep_fno and fnos[-1] > 0:
-                logger.info("-- %sフレーム目:終了(%s％)【キーフレ追加 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
+                logger.count(f"【キーフレ追加 - {bone_name}】", fno, fnos)
                 prev_sep_fno = fno // 500
 
         logger.info("-- 腕ＩＫ変換準備:終了【%s】", bone_name)
@@ -273,7 +273,7 @@ class ConvertArmIKtoFKService():
                 motion.regist_bf(transferee_bf, transferee_bone.name, fno)
                 logger.debug("transferee_qq: %s [%s], x [%s]", transferee_bone.name, transferee_bf.rotation.toEulerAngles().to_log(), finger2_x_qq.toEulerAngles().to_log())
 
-            logger.info("-- %sフレーム目:終了(%s％)【腕ＩＫ変換 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
+            logger.count("【腕ＩＫ変換 - {0}】".format(bone_name), fno, fnos)
 
     # IKターゲットの回転量移管先を取得
     # 現在のターゲットが表示されてない場合、子で同じ位置にあるのを採用

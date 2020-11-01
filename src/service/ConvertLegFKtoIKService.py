@@ -92,17 +92,15 @@ class ConvertLegFKtoIKService():
 
         # まずキー登録
         prev_sep_fno = 0
+        fno = 0
         for fno in fnos:
             bf = motion.calc_bf(leg_ik_bone_name, fno)
             motion.regist_bf(bf, leg_ik_bone_name, fno)
 
             if fno // 2000 > prev_sep_fno and fnos[-1] > 0:
-                logger.info("-- %sフレーム目:終了(%s％)【準備 - %s】", fno, round((fno / fnos[-1]) * 100, 3), leg_ik_bone_name)
+                logger.count(f"【準備 - {leg_ik_bone_name}】", fno, fnos)
                 prev_sep_fno = fno // 2000
         
-        if len(fnos) > 0 and fnos[-1] > 0:
-            logger.info("-- %sフレーム目:終了(%s％)【準備 - %s】", fnos[-1], round((fnos[-1] / fnos[-1]) * 100, 3), leg_ik_bone_name)
-
         logger.info("準備完了　【%s足ＩＫ】", direction, decoration=MLogger.DECORATION_LINE)
 
         ik_parent_name = ik_links.get(leg_ik_bone_name, offset=-1).name
@@ -111,6 +109,7 @@ class ConvertLegFKtoIKService():
         prev_sep_fno = 0
 
         # 移植
+        fno = 0
         for fno in fnos:
             leg_fk_3ds_dic = MServiceUtils.calc_global_pos(model, fk_links, motion, fno)
             _, leg_ik_matrixs = MServiceUtils.calc_global_pos(model, ik_links, motion, fno, return_matrix=True)
@@ -140,11 +139,8 @@ class ConvertLegFKtoIKService():
             motion.regist_bf(bf, leg_ik_bone_name, fno)
 
             if fno // 2000 > prev_sep_fno and fnos[-1] > 0:
-                logger.info("-- %sフレーム目:終了(%s％)【足ＩＫ変換 - %s】", fno, round((fno / fnos[-1]) * 100, 3), leg_ik_bone_name)
+                logger.count(f"【足ＩＫ変換 - {leg_ik_bone_name}】", fno, fnos)
                 prev_sep_fno = fno // 2000
-
-        if len(fnos) > 0 and fnos[-1] > 0:
-            logger.info("-- %sフレーム目:終了(%s％)【足ＩＫ変換 - %s】", fnos[-1], round((fnos[-1] / fnos[-1]) * 100, 3), leg_ik_bone_name)
 
         logger.info("変換完了　【%s足ＩＫ】", direction, decoration=MLogger.DECORATION_LINE)
 

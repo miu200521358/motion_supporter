@@ -221,6 +221,8 @@ class ConvertMultiSplitService():
                 prev_fno = check_prev_next_fnos[fno]["prev"]
                 next_fno = check_prev_next_fnos[fno]["next"]
 
+                logger.info(f"-- 軌跡ズレ防止のため、「{bone_name}」の{prev_fno}F～{next_fno}F間を細分化・不要キー除去します")
+
                 for f in range(prev_fno, next_fno + 1):
                     # 区間内を初期登録
                     if model.bones[bone_name].getRotatable():
@@ -275,7 +277,7 @@ class ConvertMultiSplitService():
                         return False
 
             if fno // 1000 > prev_sep_fno and fnos[-1] > 0:
-                logger.info("-- %sフレーム目:終了(%s％)【分割後チェック - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
+                logger.count(f"【分割後チェック - {bone_name}】", fno, fnos)
                 prev_sep_fno = fno // 1000
 
         logger.info("分割完了【%s】", bone_name, decoration=MLogger.DECORATION_LINE)

@@ -82,17 +82,19 @@ class ConvertMultiJoinService():
             return
 
         prev_sep_fno = 0
+        fno = 0
         for fno in range(fnos[-1] + 1):
             bf = motion.calc_bf(bone_name, fno)
             motion.regist_bf(bf, bone_name, fno)
 
             if fno // 500 > prev_sep_fno and fnos[-1] > 0:
-                logger.info("-- %sフレーム目:終了(%s％)【キーフレ追加 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
+                logger.count(f"【キーフレ追加 - {bone_name}】", fno, fnos)
                 prev_sep_fno = fno // 500
 
         logger.info("-- 準備完了【%s】", bone_name)
 
         prev_sep_fno = 0
+        fno = 0
         for fno in range(fnos[-1] + 1):
             bf = motion.calc_bf(bone_name, fno)
 
@@ -111,7 +113,7 @@ class ConvertMultiJoinService():
             motion.regist_bf(bf, bone_name, fno)
 
             if fno // 500 > prev_sep_fno and fnos[-1] > 0:
-                logger.info("-- %sフレーム目:終了(%s％)【多段統合 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
+                logger.count(f"【多段統合 - {bone_name}】", fno, fnos)
                 prev_sep_fno = fno // 500
 
         logger.info("統合完了【%s】", bone_name, decoration=MLogger.DECORATION_LINE)

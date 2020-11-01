@@ -94,6 +94,7 @@ class ConvertParentService():
         for bone_name in [center_bone_name]:
             if bone_name in model.bones:
                 prev_sep_fno = 0
+                fno = 0
                 fnos = motion.get_bone_fnos(bone_name, root_bone_name)
 
                 for fno in fnos:
@@ -101,16 +102,16 @@ class ConvertParentService():
                     motion.regist_bf(bf, bone_name, fno)
             
                     if fno // 2000 > prev_sep_fno and fnos[-1] > 0:
-                        logger.info("-- %sフレーム目:終了(%s％)【準備 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
+                        logger.count(f"【準備 - {bone_name}】", fno, fnos)
                         prev_sep_fno = fno // 2000
 
-                if len(fnos) > 0 and fnos[-1] > 0:
-                    logger.info("-- %sフレーム目:終了(%s％)【準備 - %s】", fnos[-1], round((fnos[-1] / fnos[-1]) * 100, 3), bone_name)
+                logger.count(f"【準備 - {bone_name}】", fno, fnos)
 
         if self.options.center_rotatation_flg:
             for bone_name in [center_bone_name, upper_bone_name, lower_bone_name]:
                 if bone_name in model.bones:
                     prev_sep_fno = 0
+                    fno = 0
                     fnos = motion.get_bone_fnos(bone_name, center_bone_name, root_bone_name)
 
                     for fno in fnos:
@@ -118,15 +119,15 @@ class ConvertParentService():
                         motion.regist_bf(bf, bone_name, fno)
 
                         if fno // 2000 > prev_sep_fno and fnos[-1] > 0:
-                            logger.info("-- %sフレーム目:終了(%s％)【準備 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
+                            logger.count(f"【準備 - {bone_name}】", fno, fnos)
                             prev_sep_fno = fno // 2000
                     
-                    if len(fnos) > 0 and fnos[-1] > 0:
-                        logger.info("-- %sフレーム目:終了(%s％)【準備 - %s】", fnos[-1], round((fnos[-1] / fnos[-1]) * 100, 3), bone_name)
+                    logger.count(f"【準備 - {bone_name}】", fno, fnos)
 
         for bone_name in [right_leg_ik_bone_name, left_leg_ik_bone_name]:
             if bone_name in model.bones:
                 prev_sep_fno = 0
+                fno = 0
                 fnos = motion.get_bone_fnos(bone_name, root_bone_name, left_leg_ik_parent_bone_name, right_leg_ik_parent_bone_name)
 
                 for fno in fnos:
@@ -134,11 +135,10 @@ class ConvertParentService():
                     motion.regist_bf(bf, bone_name, fno)
             
                     if fno // 2000 > prev_sep_fno and fnos[-1] > 0:
-                        logger.info("-- %sフレーム目:終了(%s％)【準備 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
+                        logger.count(f"【準備 - {bone_name}】", fno, fnos)
                         prev_sep_fno = fno // 2000
                 
-                if len(fnos) > 0 and fnos[-1] > 0:
-                    logger.info("-- %sフレーム目:終了(%s％)【準備 - %s】", fnos[-1], round((fnos[-1] / fnos[-1]) * 100, 3), bone_name)
+                logger.count(f"【準備 - {bone_name}】", fno, fnos)
 
         logger.info("移植開始", decoration=MLogger.DECORATION_LINE)
 
@@ -146,6 +146,7 @@ class ConvertParentService():
         for bone_name in [center_bone_name]:
             if bone_name in model.bones:
                 prev_sep_fno = 0
+                fno = 0
                 links = model.create_link_2_top_one(bone_name, is_defined=False)
                 fnos = motion.get_bone_fnos(bone_name, root_bone_name)
 
@@ -174,16 +175,16 @@ class ConvertParentService():
                     motion.regist_bf(bf, bone_name, fno)
 
                     if fno // 2000 > prev_sep_fno and fnos[-1] > 0:
-                        logger.info("-- %sフレーム目:終了(%s％)【移植 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
+                        logger.count(f"【移植 - {bone_name}】", fno, fnos)
                         prev_sep_fno = fno // 2000
 
-                if len(fnos) > 0 and fnos[-1] > 0:
-                    logger.info("-- %sフレーム目:終了(%s％)【移植 - %s】", fnos[-1], round((fnos[-1] / fnos[-1]) * 100, 3), bone_name)
+                logger.count(f"【移植 - {bone_name}】", fno, fnos)
 
         # 足IKの移植
         for bone_name, parent_bone_name in [(right_leg_ik_bone_name, right_leg_ik_parent_bone_name), (left_leg_ik_bone_name, left_leg_ik_parent_bone_name)]:
             if bone_name in model.bones:
                 prev_sep_fno = 0
+                fno = 0
                 links = model.create_link_2_top_one(bone_name, is_defined=False)
                 fnos = motion.get_bone_fnos(bone_name, root_bone_name)
 
@@ -205,11 +206,10 @@ class ConvertParentService():
                     motion.regist_bf(bf, bone_name, fno)
 
                     if fno // 2000 > prev_sep_fno and fnos[-1] > 0:
-                        logger.info("-- %sフレーム目:終了(%s％)【移植 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
+                        logger.count(f"【移植 - {bone_name}】", fno, fnos)
                         prev_sep_fno = fno // 2000
 
-                if len(fnos) > 0 and fnos[-1] > 0:
-                    logger.info("-- %sフレーム目:終了(%s％)【移植 - %s】", fnos[-1], round((fnos[-1] / fnos[-1]) * 100, 3), bone_name)
+                logger.count(f"【移植 - {bone_name}】", fno, fnos)
 
         # 全ての親削除
         if root_bone_name in motion.bones:
@@ -230,6 +230,7 @@ class ConvertParentService():
         if self.options.center_rotatation_flg:
             # センター→上半身・下半身の移植
             prev_sep_fno = 0
+            fno = 0
             fnos = motion.get_bone_fnos(upper_bone_name, lower_bone_name, center_bone_name)
             for fno in fnos:
                 center_bf = motion.calc_bf(center_bone_name, fno)
@@ -262,11 +263,10 @@ class ConvertParentService():
                 motion.regist_bf(center_bf, center_bone_name, fno)
 
                 if fno // 1000 > prev_sep_fno and fnos[-1] > 0:
-                    logger.info("-- %sフレーム目:終了(%s％)【移植 - %s】", fno, round((fno / fnos[-1]) * 100, 3), "上半身・下半身")
+                    logger.count("【移植 - 上半身・下半身】", fno, fnos)
                     prev_sep_fno = fno // 1000
 
-            if len(fnos) > 0 and fnos[-1] > 0:
-                logger.info("-- %sフレーム目:終了(%s％)【移植 - %s】", fnos[-1], round((fnos[-1] / fnos[-1]) * 100, 3), bone_name)
+            logger.count("【移植 - 上半身・下半身】", fno, fnos)
 
         logger.info("移植完了", decoration=MLogger.DECORATION_LINE)
 
