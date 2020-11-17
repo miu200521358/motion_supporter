@@ -30,7 +30,7 @@ class NoisePanel(BasePanel):
         self.header_sizer = wx.BoxSizer(wx.VERTICAL)
 
         self.description_txt = wx.StaticText(self, wx.ID_ANY, u"モーションをゆらぎ（ノイズ）を付与して複製します。\n" \
-                                             + "出力ファイル名のNxxは指定ゆらぎの大きさ、nxxxは複製連番、axxxはやる気係数（身体の振りの大きさ）です。", wx.DefaultPosition, wx.DefaultSize, 0)
+                                             + "出力ファイル名のNxxは指定ゆらぎの大きさ、nxxxは複製連番、axxはやる気係数（身体の振りの大きさ）です。", wx.DefaultPosition, wx.DefaultSize, 0)
         self.header_sizer.Add(self.description_txt, 0, wx.ALL, 5)
 
         self.static_line01 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
@@ -71,10 +71,15 @@ class NoisePanel(BasePanel):
         self.copy_cnt_ctrl.Bind(wx.EVT_SPINCTRL, self.on_change_file)
         self.setting_sizer.Add(self.copy_cnt_ctrl, 0, wx.ALL, 5)
 
+        # やる気係数
+        self.motivation_flg_ctrl = wx.CheckBox(self, wx.ID_ANY, u"やる気係数を適用する", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.motivation_flg_ctrl.SetToolTip(u"チェックを入れると、やる気係数もランダムに発生します。\nやる気係数は値が大きいほどモーションの振り幅が大きくなります。\n値が小さいほどモーションの振り幅が小さくなります。")
+        self.setting_sizer.Add(self.motivation_flg_ctrl, 0, wx.ALL, 5)
+
         # 指ゆらぎ
-        self.finger_noise_flg_ctrl_ctrl = wx.CheckBox(self, wx.ID_ANY, u"指にもゆらぎを適用する", wx.DefaultPosition, wx.DefaultSize, 0)
-        self.finger_noise_flg_ctrl_ctrl.SetToolTip(u"チェックを入れると、「指」をボーン名に含むボーンも揺らがせます。")
-        self.setting_sizer.Add(self.finger_noise_flg_ctrl_ctrl, 0, wx.ALL, 5)
+        self.finger_noise_flg_ctrl = wx.CheckBox(self, wx.ID_ANY, u"指にもゆらぎを適用する", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.finger_noise_flg_ctrl.SetToolTip(u"チェックを入れると、「指」をボーン名に含むボーンも揺らがせます。")
+        self.setting_sizer.Add(self.finger_noise_flg_ctrl, 0, wx.ALL, 5)
 
         self.sizer.Add(self.setting_sizer, 0, wx.EXPAND | wx.ALL, 5)
 

@@ -28,7 +28,8 @@ class SmoothPanel(BasePanel):
         self.header_sizer = wx.BoxSizer(wx.VERTICAL)
 
         self.description_txt = wx.StaticText(self, wx.ID_ANY, u"指定されたVMDファイルに対して、キーを分割し、滑らかな補間曲線で繋いで、再出力します。\n" \
-                                             + "スムージング回数1回で、全打ちとなり、2回目以降はフィルタリングした後に補間曲線で繋ぎます。", wx.DefaultPosition, wx.DefaultSize, 0)
+                                             + "スムージング回数1回で、全打ちとなり、2回目以降はフィルタリングした後に補間曲線で繋ぎます。\n" \
+                                             + "不要キー削除を行うと、キーが間引きされます。キー間がオリジナルから多少ずれ、やや時間がかかります。", wx.DefaultPosition, wx.DefaultSize, 0)
         self.header_sizer.Add(self.description_txt, 0, wx.ALL, 5)
 
         self.static_line01 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
@@ -92,6 +93,12 @@ class SmoothPanel(BasePanel):
                                            + "\n「補間曲線無視（曲線）」は、補間曲線を無視して、\nキーを滑らかな曲線（カトマル曲線）で繋いで補間します。")
         self.interpolation_ctrl.Bind(wx.EVT_CHOICE, self.on_change_file)
         self.setting_sizer.Add(self.interpolation_ctrl, 0, wx.ALL, 5)
+
+        # 不要キー削除処理
+        self.remove_unnecessary_flg_ctrl = wx.CheckBox(self, wx.ID_ANY, u"不要キー削除処理を追加実行する", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.remove_unnecessary_flg_ctrl.SetToolTip(u"チェックを入れると、不要キー削除処理を追加で実行します。キーが減る分、キー間が少しズレる事があります。")
+        self.remove_unnecessary_flg_ctrl.Bind(wx.EVT_CHECKBOX, self.on_change_file)
+        self.setting_sizer.Add(self.remove_unnecessary_flg_ctrl, 0, wx.ALL, 5)
 
         self.sizer.Add(self.setting_sizer, 0, wx.EXPAND | wx.ALL, 5)
 

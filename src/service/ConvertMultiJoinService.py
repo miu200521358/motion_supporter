@@ -81,6 +81,7 @@ class ConvertMultiJoinService():
         if len(fnos) == 0:
             return
 
+        # まずは全打ち
         prev_sep_fno = 0
         fno = 0
         for fno in range(fnos[-1] + 1):

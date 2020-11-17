@@ -48,7 +48,8 @@ class NoiseWorkerThread(BaseWorkerThread):
                     model=dummy_model, \
                     noise_size=self.frame.noise_panel_ctrl.noise_size_ctrl.GetValue(), \
                     copy_cnt=self.frame.noise_panel_ctrl.copy_cnt_ctrl.GetValue(), \
-                    finger_noise_flg=self.frame.noise_panel_ctrl.finger_noise_flg_ctrl_ctrl.GetValue(), \
+                    finger_noise_flg=self.frame.noise_panel_ctrl.finger_noise_flg_ctrl.GetValue(), \
+                    motivation_flg=self.frame.noise_panel_ctrl.motivation_flg_ctrl.GetValue(), \
                     output_path=self.frame.noise_panel_ctrl.output_noise_vmd_file_ctrl.file_ctrl.GetPath(), \
                     monitor=self.frame.noise_panel_ctrl.console_ctrl, \
                     is_file=False, \

@@ -15,7 +15,7 @@ logger = MLogger(__name__)
 class TargetBoneDialog(wx.Dialog):
 
     def __init__(self, frame: wx.Frame, panel: wx.Panel, direction: str, type: str):
-        super().__init__(frame, id=wx.ID_ANY, title="{0}ボーン指定".format(type), pos=(-1, -1), size=(700, 450), style=wx.DEFAULT_DIALOG_STYLE, name="TargetBoneDialog")
+        super().__init__(frame, id=wx.ID_ANY, title="{0}ボーン指定".format(type), pos=(-1, -1), size=(850, 450), style=wx.DEFAULT_DIALOG_STYLE, name="TargetBoneDialog")
 
         self.frame = frame
         self.panel = panel

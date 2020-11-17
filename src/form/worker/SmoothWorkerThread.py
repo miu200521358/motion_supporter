@@ -42,6 +42,7 @@ class SmoothWorkerThread(BaseWorkerThread):
                 loop_cnt=self.frame.smooth_panel_ctrl.loop_cnt_ctrl.GetValue(), \
                 interpolation=self.frame.smooth_panel_ctrl.interpolation_ctrl.GetSelection(), \
                 bone_list=self.frame.smooth_panel_ctrl.get_bone_list(), \
+                remove_unnecessary_flg=self.frame.smooth_panel_ctrl.remove_unnecessary_flg_ctrl.GetValue(), \
                 monitor=self.frame.smooth_panel_ctrl.console_ctrl, \
                 is_file=False, \
                 outout_datetime=logger.outout_datetime, \

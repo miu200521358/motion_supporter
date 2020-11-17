@@ -31,7 +31,7 @@ class ParentPanel(BasePanel):
         self.description_txt = wx.StaticText(self, wx.ID_ANY, u"全親を含むモーションを、全親の値をセンター・上半身・下半身・足ＩＫに移植して、全親なしのモーションに変換します。\n" \
                                              + "同時に、足IK親の値を、足ＩＫに移植します。\n" \
                                              + "センター回転移植のチェックを入れると、全親有無にかかわらず、センター回転を上半身・下半身に移植します。\n" \
-                                             + "不要キー削除を行うと、キーが間引きされます。キー間がオリジナルから多少ずれ、またかなり時間がかかります。", wx.DefaultPosition, wx.DefaultSize, 0)
+                                             + "不要キー削除を行うと、キーが間引きされます。キー間がオリジナルから多少ずれ、やや時間がかかります。", wx.DefaultPosition, wx.DefaultSize, 0)
         self.header_sizer.Add(self.description_txt, 0, wx.ALL, 5)
 
         self.static_line01 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)

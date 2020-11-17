@@ -30,7 +30,7 @@ class LegFKtoIKPanel(BasePanel):
 
         self.description_txt = wx.StaticText(self, wx.ID_ANY, u"足FK（足・ひざ・足首）を足IK（足ＩＫの位置と角度）に変換します" \
                                              + "\nIKonoffもIKonに変換されます。FKは残してあるので、IKoffにしても同じ動きになります。" \
-                                             + "\n不要キー削除を行うと、キーが間引きされます。キー間がオリジナルから多少ずれ、またかなり時間がかかります。", wx.DefaultPosition, wx.DefaultSize, 0)
+                                             + "\n不要キー削除を行うと、キーが間引きされます。キー間がオリジナルから多少ずれ、やや時間がかかります。", wx.DefaultPosition, wx.DefaultSize, 0)
         self.header_sizer.Add(self.description_txt, 0, wx.ALL, 5)
 
         self.static_line01 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)

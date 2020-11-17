@@ -32,7 +32,7 @@ class MultiSplitPanel(BasePanel):
 
         self.description_txt = wx.StaticText(self, wx.ID_ANY, u"モーションの指定ボーンの移動量と回転量をXYZに分割します。分割するボーンは「ボーン指定」ボタンから定義できます。" \
                                              + "\n回転ボーンは、YXZの順番で多段化したボーンを適用すると、回転結果がオリジナルと一致します。" \
-                                             + "\n不要キー削除を行うと、キーが間引きされます。キー間がオリジナルから多少ずれ、またかなり時間がかかります。", wx.DefaultPosition, wx.DefaultSize, 0)
+                                             + "\n不要キー削除を行うと、キーが間引きされます。キー間がオリジナルから多少ずれ、やや時間がかかります。", wx.DefaultPosition, wx.DefaultSize, 0)
         self.header_sizer.Add(self.description_txt, 0, wx.ALL, 5)
 
         self.static_line01 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)

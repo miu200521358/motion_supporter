@@ -71,13 +71,14 @@ cdef class MParentOptions:
 cdef class MNoiseOptions:
 
     def __init__(self, str version_name, int logging_level, int max_workers, VmdMotion motion, PmxModel model, int noise_size, int copy_cnt, \
-                 bint finger_noise_flg, str output_path, object monitor, bint is_file, str outout_datetime):
+                 bint finger_noise_flg, bint motivation_flg, str output_path, object monitor, bint is_file, str outout_datetime):
         self.version_name = version_name
         self.logging_level = logging_level
         self.motion = motion
         self.model = model
         self.copy_cnt = copy_cnt
         self.finger_noise_flg = finger_noise_flg
+        self.motivation_flg = motivation_flg
         self.noise_size = noise_size
         self.output_path = output_path
         self.monitor = monitor
@@ -155,7 +156,8 @@ cdef class MLegFKtoIKOptions:
 
 class MBlendOptions():
 
-    def __init__(self, version_name, logging_level, model, eye_list, eyebrow_list, lip_list, other_list, min_value, max_value, inc_value):
+    def __init__(self, str version_name, int logging_level, PmxModel model, list eye_list, list eyebrow_list, list lip_list, list other_list, \
+                 float min_value, float max_value, int inc_value):
         self.version_name = version_name
         self.logging_level = logging_level
         self.model = model
@@ -170,7 +172,8 @@ class MBlendOptions():
 
 cdef class MSmoothOptions():
 
-    def __init__(self, version_name, logging_level, max_workers, motion, model, output_path, loop_cnt, interpolation, bone_list, monitor, is_file, outout_datetime):
+    def __init__(self, str version_name, int logging_level, int max_workers, VmdMotion motion, PmxModel model, str output_path, \
+                 int loop_cnt, int interpolation, list bone_list, bint remove_unnecessary_flg, object monitor, bint is_file, str outout_datetime):
         self.version_name = version_name
         self.logging_level = logging_level
         self.motion = motion
@@ -179,6 +182,7 @@ cdef class MSmoothOptions():
         self.loop_cnt = loop_cnt
         self.interpolation = interpolation
         self.bone_list = bone_list
+        self.remove_unnecessary_flg = remove_unnecessary_flg
         self.monitor = monitor
         self.is_file = is_file
         self.outout_datetime = outout_datetime

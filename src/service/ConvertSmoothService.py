@@ -41,6 +41,8 @@ class ConvertSmoothService():
                                     loop_cnt=self.options.loop_cnt) # noqa
             service_data_txt = "{service_data_txt}　補間方法: {interpolation}\n".format(service_data_txt=service_data_txt,
                                     interpolation=("補間曲線に従う" if self.options.interpolation == 0 else "補間曲線無視（円形）" if self.options.interpolation == 1 else "補間曲線無視（曲線）")) # noqa
+            service_data_txt = "{service_data_txt}　不要キー削除: {center_rotation}\n".format(service_data_txt=service_data_txt,
+                                    center_rotation=self.options.remove_unnecessary_flg) # noqa
 
             logger.info(service_data_txt, decoration=MLogger.DECORATION_BOX)
 
@@ -94,7 +96,7 @@ class ConvertSmoothService():
                 return False
         
         # 処理回数が2回以上の場合、不要キー削除
-        if self.options.loop_cnt >= 2:
+        if self.options.loop_cnt >= 2 and self.options.remove_unnecessary_flg:
             futures = []
             with ThreadPoolExecutor(thread_name_prefix="remove", max_workers=self.options.max_workers) as executor:
                 for bone_name in self.options.motion.bones.keys():

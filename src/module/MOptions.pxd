@@ -74,6 +74,7 @@ cdef class MNoiseOptions:
     cdef public str outout_datetime
     cdef public int max_workers
     cdef public bint finger_noise_flg
+    cdef public bint motivation_flg
 
 
 cdef class MArmIKtoFKOptions:
@@ -141,6 +142,7 @@ cdef class MSmoothOptions():
     cdef public int loop_cnt
     cdef public int interpolation
     cdef public list bone_list
+    cdef public bint remove_unnecessary_flg
     cdef public object monitor
     cdef public bint is_file
     cdef public str outout_datetime

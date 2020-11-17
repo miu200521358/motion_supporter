@@ -45,7 +45,8 @@ class ConvertNoiseService():
 
             with ThreadPoolExecutor(thread_name_prefix="move", max_workers=self.options.max_workers) as executor:
                 for copy_no in range(self.options.copy_cnt):
-                    seed = np.random.randint(85, 115) / 100
+                    # やる気係数を適用する場合、シード生成
+                    seed = np.random.randint(85, 115) / 100 if self.options.motivation_flg else 1
                     futures.append(executor.submit(self.convert_noise, copy_no, seed))
 
             concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
@@ -97,16 +98,25 @@ class ConvertNoiseService():
                     else:
                         # 0だったら動かさない
                         if round(org_bf.position.x(), 1) != 0:
-                            bf.position.setX(bf.position.x() * seed + (0.5 - np.random.rand()) * (self.options.noise_size / 10))
+                            if self.options.motivation_flg:
+                                bf.position.setX(bf.position.x() * seed + (0.5 - np.random.rand()) * (self.options.noise_size / 10))
+                            else:
+                                bf.position.setX(bf.position.x() + (0.5 - np.random.rand()) * (self.options.noise_size / 10))
                         if round(org_bf.position.y(), 1) != 0 and "足ＩＫ" not in bone_name:
                             # 足ＩＫのＹは動かさない
-                            if org_bf.position.y() < 0:
-                                # Yはオリジナルがマイナスの場合は、マイナスのみに動かす
-                                bf.position.setY(bf.position.y() * seed + (0 - np.random.rand()) * (self.options.noise_size / 10))
-                            elif org_bf.position.y() > 0:
-                                bf.position.setY(bf.position.y() * seed + (0.5 - np.random.rand()) * (self.options.noise_size / 10))
+                            if self.options.motivation_flg:
+                                if org_bf.position.y() < 0:
+                                    # Yはオリジナルがマイナスの場合は、マイナスのみに動かす
+                                    bf.position.setY(bf.position.y() * seed + (0 - np.random.rand()) * (self.options.noise_size / 10))
+                                elif org_bf.position.y() > 0:
+                                    bf.position.setY(bf.position.y() * seed + (0.5 - np.random.rand()) * (self.options.noise_size / 10))
+                            else:
+                                bf.position.setY(bf.position.y() + (0.5 - np.random.rand()) * (self.options.noise_size / 10))
                         if round(org_bf.position.z(), 1) != 0:
-                            bf.position.setZ(bf.position.z() * seed + (0.5 - np.random.rand()) * (self.options.noise_size / 10))
+                            if self.options.motivation_flg:
+                                bf.position.setZ(bf.position.z() * seed + (0.5 - np.random.rand()) * (self.options.noise_size / 10))
+                            else:
+                                bf.position.setZ(bf.position.z() + (0.5 - np.random.rand()) * (self.options.noise_size / 10))
 
                         # 移動補間曲線
                         for (bz_idx1, bz_idx2, bz_idx3, bz_idx4) in [MBezierUtils.MX_x1_idxs, MBezierUtils.MX_y1_idxs, MBezierUtils.MX_x2_idxs, MBezierUtils.MX_y2_idxs, \
@@ -117,10 +127,16 @@ class ConvertNoiseService():
                 
                 # 回転
                 euler = bf.rotation.toEulerAngles()
-                # 回転は元が0であっても動かす
-                euler.setX(euler.x() * seed + (0.5 - np.random.rand()) * self.options.noise_size)
-                euler.setY(euler.y() * seed + (0.5 - np.random.rand()) * self.options.noise_size)
-                euler.setZ(euler.z() * seed + (0.5 - np.random.rand()) * self.options.noise_size)
+                # 回転は元が0であっても動かす(足は除く)
+                if "足" not in bone_name and "ひざ" not in bone_name and "足首" not in bone_name:
+                    if self.options.motivation_flg:
+                        euler.setX(euler.x() * seed + (0.5 - np.random.rand()) * self.options.noise_size)
+                        euler.setY(euler.y() * seed + (0.5 - np.random.rand()) * self.options.noise_size)
+                        euler.setZ(euler.z() * seed + (0.5 - np.random.rand()) * self.options.noise_size)
+                    else:
+                        euler.setX(euler.x() + (0.5 - np.random.rand()) * self.options.noise_size)
+                        euler.setY(euler.y() + (0.5 - np.random.rand()) * self.options.noise_size)
+                        euler.setZ(euler.z() + (0.5 - np.random.rand()) * self.options.noise_size)
                 bf.rotation = MQuaternion.fromEulerAngles(euler.x(), euler.y(), euler.z())
 
                 # 回転補間曲線
@@ -143,6 +159,8 @@ class ConvertNoiseService():
         VmdWriter(MOptionsDataSet(motion, None, self.options.model, output_path, False, False, [], None, 0, [])).write()
 
         logger.info("出力成功: %s", os.path.basename(output_path), decoration=MLogger.DECORATION_BOX)
+
+        return True
 
     # スタンス用細分化
     def prepare_split_stance(self, motion: VmdMotion, target_bone_name: str):
