@@ -230,9 +230,6 @@ class BlendPanel(BasePanel):
             self.release_tab()
             # フォーム有効化
             self.enable()
-            # 出力先をデフォルトに戻す
-            if sys.stdout != self.frame.file_panel_ctrl.console_ctrl:
-                sys.stdout = self.frame.file_panel_ctrl.console_ctrl
 
             return result
 

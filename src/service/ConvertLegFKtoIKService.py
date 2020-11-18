@@ -97,9 +97,9 @@ class ConvertLegFKtoIKService():
             bf = motion.calc_bf(leg_ik_bone_name, fno)
             motion.regist_bf(bf, leg_ik_bone_name, fno)
 
-            if fno // 2000 > prev_sep_fno and fnos[-1] > 0:
+            if fno // 1000 > prev_sep_fno and fnos[-1] > 0:
                 logger.count(f"【準備 - {leg_ik_bone_name}】", fno, fnos)
-                prev_sep_fno = fno // 2000
+                prev_sep_fno = fno // 1000
         
         logger.info("準備完了　【%s足ＩＫ】", direction, decoration=MLogger.DECORATION_LINE)
 
@@ -114,33 +114,39 @@ class ConvertLegFKtoIKService():
             leg_fk_3ds_dic = MServiceUtils.calc_global_pos(model, fk_links, motion, fno)
             _, leg_ik_matrixs = MServiceUtils.calc_global_pos(model, ik_links, motion, fno, return_matrix=True)
 
+            # 足首の角度がある状態での、つま先までのグローバル位置
+            leg_toe_fk_3ds_dic = MServiceUtils.calc_global_pos(model, toe_fk_links, motion, fno)
+
             # IKの親から見た相対位置
             leg_ik_parent_matrix = leg_ik_matrixs[ik_parent_name]
 
             bf = motion.calc_bf(leg_ik_bone_name, fno)
             # 足ＩＫの位置は、足ＩＫの親から見た足首のローカル位置（足首位置マイナス）
             bf.position = leg_ik_parent_matrix.inverted() * (leg_fk_3ds_dic[ankle_bone_name] - (model.bones[ankle_bone_name].position - model.bones[ik_parent_name].position))
-
-            # 足首の角度がある状態での、つま先までのグローバル位置
-            leg_toe_fk_3ds_dic = MServiceUtils.calc_global_pos(model, toe_fk_links, motion, fno)
+            bf.rotation = MQuaternion()
 
             # 一旦足ＩＫの位置が決まった時点で登録
             motion.regist_bf(bf, leg_ik_bone_name, fno)
             # 足ＩＫ回転なし状態でのつま先までのグローバル位置
             leg_ik_3ds_dic, leg_ik_matrisxs = MServiceUtils.calc_global_pos(model, toe_ik_links, motion, fno, return_matrix=True)
+            [logger.debug("f: %s, leg_ik_3ds_dic[%s]: %s", fno, k, v.to_log()) for k, v in leg_ik_3ds_dic.items()]
 
             # つま先のローカル位置
             ankle_child_initial_local_pos = leg_ik_matrisxs[leg_ik_bone_name].inverted() * leg_ik_3ds_dic[toe_ik_bone_name]
             ankle_child_local_pos = leg_ik_matrisxs[leg_ik_bone_name].inverted() * leg_toe_fk_3ds_dic[ankle_child_bone_name]
 
+            logger.debug("f: %s, ankle_child_initial_local_pos: %s", fno, ankle_child_initial_local_pos.to_log())
+            logger.debug("f: %s, ankle_child_local_pos: %s", fno, ankle_child_local_pos.to_log())
+
             # 足ＩＫの回転は、足首から見たつま先の方向
             bf.rotation = MQuaternion.rotationTo(ankle_child_initial_local_pos, ankle_child_local_pos)
+            logger.debug("f: %s, ik_rotation: %s", fno, bf.rotation.toEulerAngles4MMD().to_log())
 
             motion.regist_bf(bf, leg_ik_bone_name, fno)
 
-            if fno // 2000 > prev_sep_fno and fnos[-1] > 0:
+            if fno // 500 > prev_sep_fno and fnos[-1] > 0:
                 logger.count(f"【足ＩＫ変換 - {leg_ik_bone_name}】", fno, fnos)
-                prev_sep_fno = fno // 2000
+                prev_sep_fno = fno // 500
 
         logger.info("変換完了　【%s足ＩＫ】", direction, decoration=MLogger.DECORATION_LINE)
 

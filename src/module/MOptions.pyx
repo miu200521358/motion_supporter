@@ -157,7 +157,7 @@ cdef class MLegFKtoIKOptions:
 class MBlendOptions():
 
     def __init__(self, str version_name, int logging_level, PmxModel model, list eye_list, list eyebrow_list, list lip_list, list other_list, \
-                 float min_value, float max_value, int inc_value):
+                 float min_value, float max_value, float inc_value):
         self.version_name = version_name
         self.logging_level = logging_level
         self.model = model

@@ -217,6 +217,8 @@ class LegFKtoIKPanel(BasePanel):
         self.elapsed_time = event.elapsed_time
         logger.info("\n処理時間: %s", self.show_worked_time())
 
+        self.leg_fk2ik_btn_ctrl.SetLabel("足ＦＫ変換")
+
         # 終了音
         self.frame.sound_finish()
 

@@ -308,37 +308,37 @@ class TargetBoneDialog(wx.Dialog):
 
         # 置換後ボーン(RX)
         self.rep_rx_choices.append(wx.ComboBox(self.window, id=wx.ID_ANY, choices=self.rep_bones, style=wx.CB_DROPDOWN | wx.TE_PROCESS_ENTER))
-        self.rep_rx_choices[-1].Bind(wx.EVT_COMBOBOX, lambda event: self.on_change_choice(event, midx))
+        # self.rep_rx_choices[-1].Bind(wx.EVT_COMBOBOX, lambda event: self.on_change_choice(event, midx))
         self.rep_rx_choices[-1].Bind(wx.EVT_TEXT_ENTER, lambda event: self.on_enter_choice(event, midx))
         self.grid_sizer.Add(self.rep_rx_choices[-1], 0, wx.ALL, 5)
 
         # 置換後ボーン(RY)
         self.rep_ry_choices.append(wx.ComboBox(self.window, id=wx.ID_ANY, choices=self.rep_bones, style=wx.CB_DROPDOWN | wx.TE_PROCESS_ENTER))
-        self.rep_ry_choices[-1].Bind(wx.EVT_COMBOBOX, lambda event: self.on_change_choice(event, midx))
+        # self.rep_ry_choices[-1].Bind(wx.EVT_COMBOBOX, lambda event: self.on_change_choice(event, midx))
         self.rep_ry_choices[-1].Bind(wx.EVT_TEXT_ENTER, lambda event: self.on_enter_choice(event, midx))
         self.grid_sizer.Add(self.rep_ry_choices[-1], 0, wx.ALL, 5)
 
         # 置換後ボーン(RZ)
         self.rep_rz_choices.append(wx.ComboBox(self.window, id=wx.ID_ANY, choices=self.rep_bones, style=wx.CB_DROPDOWN | wx.TE_PROCESS_ENTER))
-        self.rep_rz_choices[-1].Bind(wx.EVT_COMBOBOX, lambda event: self.on_change_choice(event, midx))
+        # self.rep_rz_choices[-1].Bind(wx.EVT_COMBOBOX, lambda event: self.on_change_choice(event, midx))
         self.rep_rz_choices[-1].Bind(wx.EVT_TEXT_ENTER, lambda event: self.on_enter_choice(event, midx))
         self.grid_sizer.Add(self.rep_rz_choices[-1], 0, wx.ALL, 5)
 
         # 置換後ボーン(MX)
         self.rep_mx_choices.append(wx.ComboBox(self.window, id=wx.ID_ANY, choices=self.rep_bones, style=wx.CB_DROPDOWN | wx.TE_PROCESS_ENTER))
-        self.rep_mx_choices[-1].Bind(wx.EVT_COMBOBOX, lambda event: self.on_change_choice(event, midx))
+        # self.rep_mx_choices[-1].Bind(wx.EVT_COMBOBOX, lambda event: self.on_change_choice(event, midx))
         self.rep_mx_choices[-1].Bind(wx.EVT_TEXT_ENTER, lambda event: self.on_enter_choice(event, midx))
         self.grid_sizer.Add(self.rep_mx_choices[-1], 0, wx.ALL, 5)
 
         # 置換後ボーン(MY)
         self.rep_my_choices.append(wx.ComboBox(self.window, id=wx.ID_ANY, choices=self.rep_bones, style=wx.CB_DROPDOWN | wx.TE_PROCESS_ENTER))
-        self.rep_my_choices[-1].Bind(wx.EVT_COMBOBOX, lambda event: self.on_change_choice(event, midx))
+        # self.rep_my_choices[-1].Bind(wx.EVT_COMBOBOX, lambda event: self.on_change_choice(event, midx))
         self.rep_my_choices[-1].Bind(wx.EVT_TEXT_ENTER, lambda event: self.on_enter_choice(event, midx))
         self.grid_sizer.Add(self.rep_my_choices[-1], 0, wx.ALL, 5)
 
         # 置換後ボーン(MZ)
         self.rep_mz_choices.append(wx.ComboBox(self.window, id=wx.ID_ANY, choices=self.rep_bones, style=wx.CB_DROPDOWN | wx.TE_PROCESS_ENTER))
-        self.rep_mz_choices[-1].Bind(wx.EVT_COMBOBOX, lambda event: self.on_change_choice(event, midx))
+        # self.rep_mz_choices[-1].Bind(wx.EVT_COMBOBOX, lambda event: self.on_change_choice(event, midx))
         self.rep_mz_choices[-1].Bind(wx.EVT_TEXT_ENTER, lambda event: self.on_enter_choice(event, midx))
         self.grid_sizer.Add(self.rep_mz_choices[-1], 0, wx.ALL, 5)
 
@@ -382,42 +382,78 @@ class TargetBoneDialog(wx.Dialog):
             if bone_data.getTranslatable():
                 # 移動ボーン
                 if len(self.rep_mx_choices[midx].GetValue()) == 0:
-                    self.rep_mx_choices[midx].ChangeValue(text)
-                    cidx = self.rep_mx_choices[midx].FindString(text)
+                    mxtext = f'{text}MX'
+                    cidx = self.rep_mx_choices[midx].FindString(mxtext)
                     if cidx >= 0:
+                        self.rep_mx_choices[midx].ChangeValue(mxtext)
                         self.rep_mx_choices[midx].SetSelection(cidx)
+                    else:
+                        self.rep_mx_choices[midx].ChangeValue(text)
+                        cidx = self.rep_mx_choices[midx].FindString(text)
+                        if cidx >= 0:
+                            self.rep_mx_choices[midx].SetSelection(cidx)
 
                 if len(self.rep_my_choices[midx].GetValue()) == 0:
-                    self.rep_my_choices[midx].ChangeValue(text)
-                    cidx = self.rep_my_choices[midx].FindString(text)
+                    mytext = f'{text}MY'
+                    cidx = self.rep_my_choices[midx].FindString(mytext)
                     if cidx >= 0:
+                        self.rep_my_choices[midx].ChangeValue(mytext)
                         self.rep_my_choices[midx].SetSelection(cidx)
+                    else:
+                        self.rep_my_choices[midx].ChangeValue(text)
+                        cidx = self.rep_my_choices[midx].FindString(text)
+                        if cidx >= 0:
+                            self.rep_my_choices[midx].SetSelection(cidx)
 
                 if len(self.rep_mz_choices[midx].GetValue()) == 0:
-                    self.rep_mz_choices[midx].ChangeValue(text)
-                    cidx = self.rep_mz_choices[midx].FindString(text)
+                    mztext = f'{text}MZ'
+                    cidx = self.rep_mz_choices[midx].FindString(mztext)
                     if cidx >= 0:
+                        self.rep_mz_choices[midx].ChangeValue(mztext)
                         self.rep_mz_choices[midx].SetSelection(cidx)
+                    else:
+                        self.rep_mz_choices[midx].ChangeValue(text)
+                        cidx = self.rep_mz_choices[midx].FindString(text)
+                        if cidx >= 0:
+                            self.rep_mz_choices[midx].SetSelection(cidx)
 
             if bone_data.getRotatable():
                 # 回転ボーン
                 if len(self.rep_rx_choices[midx].GetValue()) == 0:
-                    self.rep_rx_choices[midx].ChangeValue(text)
-                    cidx = self.rep_rx_choices[midx].FindString(text)
+                    rxtext = f'{text}RX'
+                    cidx = self.rep_rx_choices[midx].FindString(rxtext)
                     if cidx >= 0:
+                        self.rep_rx_choices[midx].ChangeValue(rxtext)
                         self.rep_rx_choices[midx].SetSelection(cidx)
+                    else:
+                        self.rep_rx_choices[midx].ChangeValue(text)
+                        cidx = self.rep_rx_choices[midx].FindString(text)
+                        if cidx >= 0:
+                            self.rep_rx_choices[midx].SetSelection(cidx)
 
                 if len(self.rep_ry_choices[midx].GetValue()) == 0:
-                    self.rep_ry_choices[midx].ChangeValue(text)
-                    cidx = self.rep_ry_choices[midx].FindString(text)
+                    rytext = f'{text}RY'
+                    cidx = self.rep_ry_choices[midx].FindString(rytext)
                     if cidx >= 0:
+                        self.rep_ry_choices[midx].ChangeValue(rytext)
                         self.rep_ry_choices[midx].SetSelection(cidx)
+                    else:
+                        self.rep_ry_choices[midx].ChangeValue(text)
+                        cidx = self.rep_ry_choices[midx].FindString(text)
+                        if cidx >= 0:
+                            self.rep_ry_choices[midx].SetSelection(cidx)
 
                 if len(self.rep_rz_choices[midx].GetValue()) == 0:
-                    self.rep_rz_choices[midx].ChangeValue(text)
-                    cidx = self.rep_rz_choices[midx].FindString(text)
+                    rztext = f'{text}RZ'
+                    cidx = self.rep_rz_choices[midx].FindString(rztext)
                     if cidx >= 0:
+                        self.rep_rz_choices[midx].ChangeValue(rztext)
                         self.rep_rz_choices[midx].SetSelection(cidx)
+                    else:
+                        self.rep_rz_choices[midx].ChangeValue(text)
+                        cidx = self.rep_rz_choices[midx].FindString(text)
+                        if cidx >= 0:
+                            self.rep_rz_choices[midx].SetSelection(cidx)
 
         elif len(text) == 0:
             # 空にした場合は空に

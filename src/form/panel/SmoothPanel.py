@@ -229,10 +229,6 @@ class SmoothPanel(BasePanel):
         # プログレス非表示
         self.gauge_ctrl.SetValue(0)
 
-        # 出力先をデフォルトに戻す
-        if sys.stdout != self.frame.file_panel_ctrl.console_ctrl:
-            sys.stdout = self.frame.file_panel_ctrl.console_ctrl
-
     def show_worked_time(self):
         # 経過秒数を時分秒に変換
         td_m, td_s = divmod(self.elapsed_time, 60)
