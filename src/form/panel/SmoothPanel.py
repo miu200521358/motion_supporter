@@ -14,6 +14,7 @@ from utils import MFormUtils, MFileUtils
 from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__)
+TIMER_ID = wx.NewId()
 
 # イベント定義
 (SmoothThreadEvent, EVT_SMOOTH_THREAD) = wx.lib.newevent.NewEvent()
@@ -64,8 +65,8 @@ class SmoothPanel(BasePanel):
         self.bone_target_txt_ctrl.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DLIGHT))
         self.target_sizer.Add(self.bone_target_txt_ctrl, 1, wx.EXPAND | wx.ALL, 5)
 
-        self.bone_target_btn_ctrl = wx.Button(self, wx.ID_ANY, u"ボーン指定", wx.DefaultPosition, wx.DefaultSize, 0)
-        self.bone_target_btn_ctrl.SetToolTip(u"モーションに登録されているボーンから、スムージングにかけたいボーンを指定できます")
+        self.bone_target_btn_ctrl = wx.Button(self, wx.ID_ANY, u"対象指定", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.bone_target_btn_ctrl.SetToolTip(u"モーションに登録されているボーン・モーフから、スムージングにかけたいボーン・モーフを指定できます")
         self.bone_target_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_click_bone_target)
         self.target_sizer.Add(self.bone_target_btn_ctrl, 0, wx.ALIGN_BOTTOM | wx.ALL, 5)
 
@@ -108,6 +109,7 @@ class SmoothPanel(BasePanel):
         self.smooth_btn_ctrl = wx.Button(self, wx.ID_ANY, u"スムージング実行", wx.DefaultPosition, wx.Size(200, 50), 0)
         self.smooth_btn_ctrl.SetToolTip(u"VMDを滑らかに繋いだモーションを再生成します。")
         self.smooth_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_convert_smooth)
+        self.smooth_btn_ctrl.Bind(wx.EVT_LEFT_DCLICK, self.on_doubleclick)
         btn_sizer.Add(self.smooth_btn_ctrl, 0, wx.ALL, 5)
 
         self.sizer.Add(btn_sizer, 0, wx.ALIGN_CENTER | wx.SHAPED, 5)
@@ -169,8 +171,22 @@ class SmoothPanel(BasePanel):
         self.interpolation_ctrl.Enable()
         self.smooth_btn_ctrl.Enable()
 
-    # スムージング変換
+    def on_doubleclick(self, event: wx.Event):
+        self.timer.Stop()
+        logger.warning("ダブルクリックされました。", decoration=MLogger.DECORATION_BOX)
+        event.Skip(False)
+        return False
+    
+    # 多段分割変換
     def on_convert_smooth(self, event: wx.Event):
+        self.timer = wx.Timer(self, TIMER_ID)
+        self.timer.Start(200)
+        self.Bind(wx.EVT_TIMER, self.on_convert, id=TIMER_ID)
+
+    # スムージング変換
+    def on_convert(self, event: wx.Event):
+        self.timer.Stop()
+        self.Unbind(wx.EVT_TIMER, id=TIMER_ID)
         # フォーム無効化
         self.disable()
         # タブ固定
@@ -192,23 +208,44 @@ class SmoothPanel(BasePanel):
         result = True
         result = self.smooth_vmd_file_ctrl.is_valid() and self.smooth_model_file_ctrl.is_valid() and result
 
-        if not result:
-            # 終了音
-            self.frame.sound_finish()
-            # タブ移動可
-            self.release_tab()
-            # フォーム有効化
-            self.enable()
-
-            return result
-
         # スムージング変換開始
-        if self.convert_smooth_worker:
-            logger.error("まだ処理が実行中です。終了してから再度実行してください。", decoration=MLogger.DECORATION_BOX)
-        else:
-            # 別スレッドで実行
+        if self.smooth_btn_ctrl.GetLabel() == "スムージング停止" and self.convert_smooth_worker:
+            # フォーム無効化
+            self.disable()
+            # 停止状態でボタン押下時、停止
+            self.convert_smooth_worker.stop()
+
+            # タブ移動可
+            self.frame.release_tab()
+            # フォーム有効化
+            self.frame.enable()
+            # ワーカー終了
+            self.convert_smooth_worker = None
+            # プログレス非表示
+            self.gauge_ctrl.SetValue(0)
+
+            logger.warning("スムージングを中断します。", decoration=MLogger.DECORATION_BOX)
+            self.smooth_btn_ctrl.SetLabel("スムージング実行")
+            
+            event.Skip(False)
+        elif not self.convert_smooth_worker:
+            # フォーム無効化
+            self.disable()
+            # タブ固定
+            self.fix_tab()
+            # コンソールクリア
+            self.console_ctrl.Clear()
+            # ラベル変更
+            self.smooth_btn_ctrl.SetLabel("スムージング停止")
+            self.smooth_btn_ctrl.Enable()
+
             self.convert_smooth_worker = SmoothWorkerThread(self.frame, SmoothThreadEvent, self.frame.is_saving)
             self.convert_smooth_worker.start()
+            
+            event.Skip()
+        else:
+            logger.error("まだ処理が実行中です。終了してから再度実行してください。", decoration=MLogger.DECORATION_BOX)
+            event.Skip(False)
 
         return result
 
@@ -216,6 +253,7 @@ class SmoothPanel(BasePanel):
     def on_convert_smooth_result(self, event: wx.Event):
         self.elapsed_time = event.elapsed_time
         logger.info("\n処理時間: %s", self.show_worked_time())
+        self.smooth_btn_ctrl.SetLabel("スムージング実行")
 
         # 終了音
         self.frame.sound_finish()
@@ -333,6 +371,9 @@ class TargetBoneDialog(wx.Dialog):
                     if display_type == 0 and bone_idx in model.bone_indexes and model.bone_indexes[bone_idx] in motion.bones.keys():
                         # 表示枠にボーンがあって、モーションにもある場合、追加
                         bone_list.append(model.bone_indexes[bone_idx])
+                    if display_type == 1 and bone_idx in model.morph_indexes and model.morph_indexes[bone_idx] in motion.morphs.keys():
+                        # 表示枠にモーフがあって、モーションにもある場合、追加
+                        bone_list.append(model.morph_indexes[bone_idx])
 
                 if len(bone_list) > 0:
                     # 追加対象がある場合、ツリー追加

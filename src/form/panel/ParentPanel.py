@@ -226,6 +226,7 @@ class ParentPanel(BasePanel):
     def on_convert_parent_result(self, event: wx.Event):
         self.elapsed_time = event.elapsed_time
         logger.info("\n処理時間: %s", self.show_worked_time())
+        self.parent_btn_ctrl.SetLabel("全親移植")
 
         # 終了音
         self.frame.sound_finish()
