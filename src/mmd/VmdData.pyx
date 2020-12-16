@@ -1415,12 +1415,12 @@ cdef class VmdMotion:
 
         return fill_mf
 
-    def smooth_filter_mf(self, data_set_no: int, morph_name: str, is_rot: bint, is_mov: bint, loop=1, \
+    def smooth_filter_mf(self, data_set_no: int, morph_name: str, loop=1, \
                          config={"freq": 30, "mincutoff": 0.3, "beta": 0.01, "dcutoff": 0.25}, start_fno=-1, end_fno=-1, is_show_log=True):
-        self.c_smooth_filter_mf(data_set_no, morph_name, is_rot, is_mov, loop, config, start_fno, end_fno, is_show_log)
+        self.c_smooth_filter_mf(data_set_no, morph_name, loop, config, start_fno, end_fno, is_show_log)
 
     # フィルターをかける
-    cdef c_smooth_filter_mf(self, int data_set_no, str morph_name, bint is_rot, bint is_mov, int loop, dict config, int start_fno, int end_fno, bint is_show_log):
+    cdef c_smooth_filter_mf(self, int data_set_no, str morph_name, int loop, dict config, int start_fno, int end_fno, bint is_show_log):
         cdef OneEuroFilter rxfilter
         cdef int n
         cdef list fnos

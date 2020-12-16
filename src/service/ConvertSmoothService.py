@@ -146,7 +146,7 @@ class ConvertSmoothService():
                 # 処理回数が3回以上の場合、フィルタをかける
                 if self.options.loop_cnt > 2 and n > 2:
                     logger.info("【フィルタリング%s回目】%s 開始", n - 1, morph_name)
-                    self.options.motion.smooth_filter_mf(0, morph_name, config={"freq": 30, "mincutoff": 1, "beta": 1, "dcutoff": 1})
+                    self.options.motion.smooth_filter_mf(0, morph_name, config={"freq": 30, "mincutoff": 0.3, "beta": 0.01, "dcutoff": 0.25})
                     logger.info("【フィルタリング%s回目】%s 終了", n - 1, morph_name)
                   
                 logger.info("【不要キー削除%s回目】%s 開始", n, morph_name)
@@ -172,7 +172,7 @@ class ConvertSmoothService():
                     logger.info("【フィルタリング%s回目】%s 開始", n - 1, bone_name)
                     self.options.motion.smooth_filter_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
                                                          self.options.model.bones[bone_name].getTranslatable(), \
-                                                         config={"freq": 30, "mincutoff": 1, "beta": 1, "dcutoff": 1})
+                                                         config={"freq": 30, "mincutoff": 0.3, "beta": 0.01, "dcutoff": 0.25})
                     logger.info("【フィルタリング%s回目】%s 終了", n - 1, bone_name)
                   
                 logger.info("【不要キー削除%s回目】%s 開始", n, bone_name)

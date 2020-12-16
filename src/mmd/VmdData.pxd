@@ -104,7 +104,7 @@ cdef class VmdMotion:
 
     cdef VmdMorphFrame c_calc_mf(self, str morph_name, int fno, bint is_key, bint is_read)
 
-    cdef c_smooth_filter_mf(self, int data_set_no, str morph_name, bint is_rot, bint is_mov, int loop, dict config, int start_fno, int end_fno, bint is_show_log)
+    cdef c_smooth_filter_mf(self, int data_set_no, str morph_name, int loop, dict config, int start_fno, int end_fno, bint is_show_log)
 
     cdef c_remove_unnecessary_mf(self, int data_set_no, str morph_name, double offset, double diff_limit, int r_start_fno, int r_end_fno, bint is_show_log, bint is_force)
     
