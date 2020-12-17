@@ -1385,6 +1385,7 @@ cdef class VmdMotion:
             return fill_mf
 
         if len(after_fnos) == 0:
+            logger.info("not after")
             # 番号より前があって、後のがない場合、前のをコピーして返す
             fill_mf = self.morphs[morph_name][before_fnos[-1]].copy()
             fill_mf.fno = fno
@@ -1393,6 +1394,7 @@ cdef class VmdMotion:
             return fill_mf
         
         if len(before_fnos) == 0:
+            logger.info("not before")
             # 番号より後があって、前がない場合、後のをコピーして返す
             fill_mf = self.morphs[morph_name][after_fnos[0]].copy()
             fill_mf.fno = fno
@@ -1408,10 +1410,11 @@ cdef class VmdMotion:
         fill_mf.bname = prev_mf.bname
 
         # 線形で埋める
-        rx, ry, rt = MBezierUtils.evaluate(MBezierUtils.LINEAR_MMD_INTERPOLATION[1].x(), MBezierUtils.LINEAR_MMD_INTERPOLATION[1].y(), \
-                                            MBezierUtils.LINEAR_MMD_INTERPOLATION[2].x(), MBezierUtils.LINEAR_MMD_INTERPOLATION[2].y(), \
-                                            prev_mf.fno, fill_mf.fno, next_mf.fno)
-        fill_mf.ratio = prev_mf.ratio + ((next_mf.ratio - prev_mf.ratio) * ry)
+        # rx, ry, rt = MBezierUtils.evaluate(MBezierUtils.LINEAR_MMD_INTERPOLATION[1].x(), MBezierUtils.LINEAR_MMD_INTERPOLATION[1].y(), \
+        #                                     MBezierUtils.LINEAR_MMD_INTERPOLATION[2].x(), MBezierUtils.LINEAR_MMD_INTERPOLATION[2].y(), \
+        #                                     prev_mf.fno, fill_mf.fno, next_mf.fno)
+        fill_mf.ratio = prev_mf.ratio + ((next_mf.ratio - prev_mf.ratio) * ((fill_mf.fno - prev_mf.fno) / (next_mf.fno - prev_mf.fno)))
+        # logger.info("** fno: %s fill: %s, head: %s, tail: %s", fill_mf.fno, fill_mf.ratio, prev_mf.ratio, next_mf.ratio)
 
         return fill_mf
 
@@ -1496,13 +1499,14 @@ cdef class VmdMotion:
 
             prev_mf = mf
         
-        # 差異がないキーを除去する
-        if sum(ratio_vs) < 0.0001:
-            for f in range(1, fnos[-1] + 1):
-                if f in self.morphs[morph_name]:
-                    del self.morphs[morph_name][f]
+        # # 差異がないキーを除去する
+        # if sum(ratio_vs) < 0.0001:
+        #     for f in range(1, fnos[-1] + 1):
+        #         if f in self.morphs[morph_name]:
+        #             del self.morphs[morph_name][f]
         
         reduce_fnos = self.reduce_morph_frame(morph_name, fnos, fnos[0], fnos[-1], threshold=0.05)
+        reduce_fnos.append(fnos[-1])
 
         for f in fnos:
             if f not in reduce_fnos and f in self.morphs[morph_name]:
@@ -1523,26 +1527,37 @@ cdef class VmdMotion:
         cdef VmdMorphFrame head_mf = self.c_calc_mf(morph_name, head, is_key=False, is_read=False)
         # 終了のモーフ
         cdef VmdMorphFrame tail_mf = self.c_calc_mf(morph_name, tail, is_key=False, is_read=False)
+        logger.debug("head_mf: %s, %s tail_mf: %s, %s", head_mf.fno, head_mf.ratio, tail_mf.fno, tail_mf.ratio)
 
         cdef int i
 
         for i in range(head + 1, tail, 1):
-            ip_ratio = head_mf.ratio + (tail_mf.ratio - head_mf.ratio) * (i - head) / total
+            # rx, ry, rt = MBezierUtils.evaluate(MBezierUtils.LINEAR_MMD_INTERPOLATION[1].x(), MBezierUtils.LINEAR_MMD_INTERPOLATION[1].y(), \
+            #                                     MBezierUtils.LINEAR_MMD_INTERPOLATION[2].x(), MBezierUtils.LINEAR_MMD_INTERPOLATION[2].y(), \
+            #                                     head_mf.fno, i, tail_mf.fno)
+            ip_ratio = head_mf.ratio + ((tail_mf.ratio - head_mf.ratio) * ((i - head_mf.fno) / (tail_mf.fno - head_mf.fno)))
+            # ip_ratio = head_mf.ratio + (tail_mf.ratio - head_mf.ratio) * (i - head) / total
             now_mf = self.c_calc_mf(morph_name, i, is_key=False, is_read=False)
+            logger.debug("morph_name: %s, i: %s ip_ratio: %s, now: %s, head: %s, tail: %s", morph_name, i, ip_ratio, now_mf.ratio, head_mf.ratio, tail_mf.ratio)
             pos_err = abs(ip_ratio - now_mf.ratio)
 
             if pos_err > max_err:
                 max_idx = i
                 max_err = pos_err
 
+        logger.debug("max_err: %s max_idx: %s", max_err, max_idx)
+
         v1 = []
         if max_err > threshold:
             v1 = self.reduce_morph_frame(morph_name, fnos, head, max_idx, threshold)
             v2 = self.reduce_morph_frame(morph_name, fnos, max_idx, tail, threshold)
-            
+            logger.debug("threshold v1: %s", v1)
+            logger.debug("threshold v2: %s", v2)
+
             v1.extend(v2)
         else:
             v1.append(head_mf.fno)
+            logger.debug("not threshold v1: %s", head_mf.fno)
 
         return v1
 
