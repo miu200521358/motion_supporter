@@ -118,6 +118,8 @@ class VmdReader:
                 prev_n = 0
                 for n in range(motion.morph_cnt):
                     morph = VmdMorphFrame()
+                    morph.key = True
+                    morph.read = True
 
                     # モーフ ----------------------
                     # モーフ名

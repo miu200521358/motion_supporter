@@ -8,7 +8,7 @@ import numpy as np
 cimport numpy as np
 cimport cython
 from libc.math cimport sin, cos, acos, atan2, asin, pi, sqrt
-from math import degrees, radians
+from math import degrees, radians, isnan, isinf
 
 from utils.MLogger import MLogger # noqa
 
@@ -1713,10 +1713,10 @@ cpdef bint is_almost_null(v):
 
 
 cpdef double get_effective_value(v):
-    if math.isnan(v):
+    if isnan(v):
         return 0
     
-    if math.isinf(v):
+    if isinf(v):
         return 0
     
     return v

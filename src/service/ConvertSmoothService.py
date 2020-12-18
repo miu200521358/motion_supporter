@@ -220,6 +220,7 @@ class ConvertSmoothService():
 
             # 全キーフレを取得
             fnos = self.options.motion.get_morph_fnos(morph_name)
+            logger.debug("get_morph_fnos morph_name: %s, fnos: %s", morph_name, fnos)
 
             m_values = []
             
@@ -228,11 +229,17 @@ class ConvertSmoothService():
                 m_values.append(mf.ratio)
             
             m_all_values = MBezierUtils.calc_value_from_catmullrom(morph_name, fnos, m_values)
-            logger.info("【スムージング1回目】%s - 終了", morph_name)
+            
+            logger.debug("get_morph_fnos morph_name: %s, m_all_values: %s", morph_name, m_all_values[:10])
 
             # カトマル曲線で生成した値を全打ち
             for fno, mr in enumerate(m_all_values):
-                mf = self.options.motion.calc_mf(morph_name, fno)
+                mf = VmdMorphFrame(fno)
+                mf.set_name(morph_name)
+
+                if math.isnan(mr) or math.isinf(mr):
+                    logger.debug("** mr: (%s)%s", fno, mr)
+                
                 mf.ratio = mr
                 self.options.motion.regist_mf(mf, morph_name, fno)
                 
