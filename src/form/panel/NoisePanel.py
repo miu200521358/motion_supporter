@@ -231,6 +231,7 @@ class NoisePanel(BasePanel):
     def on_convert_noise_result(self, event: wx.Event):
         self.elapsed_time = event.elapsed_time
         logger.info("\n処理時間: %s", self.show_worked_time())
+        self.noise_btn_ctrl.SetLabel("ゆらぎ複製")
 
         # 終了音
         self.frame.sound_finish()

@@ -35,7 +35,7 @@ class ConvertSmoothService():
                                     vmd=os.path.basename(self.options.motion.path)) # noqa
             service_data_txt = "{service_data_txt}　モデル: {model}({model_name})\n".format(service_data_txt=service_data_txt,
                                     model=os.path.basename(self.options.motion.path), model_name=self.options.model.name) # noqa
-            service_data_txt = "{service_data_txt}　対象ボーン: {bone_names}回\n".format(service_data_txt=service_data_txt,
+            service_data_txt = "{service_data_txt}　対象ボーン: {bone_names}\n".format(service_data_txt=service_data_txt,
                                     bone_names=", ".join(self.options.bone_list)) # noqa
             service_data_txt = "{service_data_txt}　処理回数: {loop_cnt}回\n".format(service_data_txt=service_data_txt,
                                     loop_cnt=self.options.loop_cnt) # noqa
@@ -89,6 +89,30 @@ class ConvertSmoothService():
                             # 曲線補間でキー数が足りない場合、線形補間
                             logger.warning("曲線補間が指定されましたが、キー数が3つに満たないため、計算出来ません。ボーン名: %s", bone_name)
                             futures.append(executor.submit(self.prepare_linear, bone_name))
+
+            for morph_name in self.options.motion.morphs.keys():
+                if morph_name in self.options.model.morphs and morph_name in self.options.bone_list:
+                    if self.options.interpolation == 0 and len(self.options.motion.morphs[morph_name].keys()) >= 2:
+                        # 線形補間の場合、そのまま全打ち
+                        futures.append(executor.submit(self.prepare_linear, morph_name, is_morph=True))
+                    elif self.options.interpolation == 1:
+                        if len(self.options.motion.morphs[morph_name].keys()) > 2:
+                            # 円形補間の場合、モーフはそのまま
+                            logger.warning("円形補間が指定されましたが、モーフは円形補間計算が出来ません。モーフ名: %s", morph_name)
+                            futures.append(executor.submit(self.prepare_linear, morph_name, is_morph=True))
+                        else:
+                            # 円形補間でキー数が足りない場合、線形補間
+                            logger.warning("円形補間が指定されましたが、キー数が3つに満たないため、計算出来ません。モーフ名: %s", morph_name)
+                            futures.append(executor.submit(self.prepare_linear, morph_name, is_morph=True))
+                    elif self.options.interpolation == 2:
+                        if len(self.options.motion.morphs[morph_name].keys()) > 2:
+                            # 曲線補間の場合、カトマル曲線全打ち
+                            futures.append(executor.submit(self.prepare_curve_morph, morph_name))
+                        else:
+                            # 曲線補間でキー数が足りない場合、線形補間
+                            logger.warning("曲線補間が指定されましたが、キー数が3つに満たないため、計算出来ません。モーフ名: %s", morph_name)
+                            futures.append(executor.submit(self.prepare_linear, morph_name, is_morph=True))
+
         concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
         for f in futures:
@@ -102,6 +126,9 @@ class ConvertSmoothService():
                 for bone_name in self.options.motion.bones.keys():
                     if bone_name in self.options.model.bones and bone_name in self.options.bone_list:
                         futures.append(executor.submit(self.remove_filterd_bf, bone_name))
+                for morph_name in self.options.motion.morphs.keys():
+                    if morph_name in self.options.model.morphs and morph_name in self.options.bone_list:
+                        futures.append(executor.submit(self.remove_filterd_mf, morph_name))
             concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
             for f in futures:
@@ -109,6 +136,30 @@ class ConvertSmoothService():
                     return False
 
         return True
+        
+    # 不要キー削除処理
+    def remove_filterd_mf(self, morph_name: str):
+        try:
+            logger.copy(self.options)
+
+            for n in range(1, self.options.loop_cnt):
+                # 処理回数が3回以上の場合、フィルタをかける
+                if self.options.loop_cnt > 2 and n > 2:
+                    logger.info("【フィルタリング%s回目】%s 開始", n - 1, morph_name)
+                    self.options.motion.smooth_filter_mf(0, morph_name, config={"freq": 30, "mincutoff": 0.3, "beta": 0.01, "dcutoff": 0.25})
+                    logger.info("【フィルタリング%s回目】%s 終了", n - 1, morph_name)
+                  
+                logger.info("【不要キー削除%s回目】%s 開始", n, morph_name)
+                self.options.motion.remove_unnecessary_mf(0, morph_name, offset=0)
+                logger.info("【不要キー削除%s回目】%s 終了", n, morph_name)
+
+            return True
+        except SizingException as se:
+            logger.error("スムージング処理が処理できないデータで終了しました。\n\n%s", se.message)
+            return False
+        except Exception as e:
+            logger.error("スムージング処理が意図せぬエラーで終了しました。", e)
+            return False
     
     # 不要キー削除処理
     def remove_filterd_bf(self, bone_name: str):
@@ -121,7 +172,7 @@ class ConvertSmoothService():
                     logger.info("【フィルタリング%s回目】%s 開始", n - 1, bone_name)
                     self.options.motion.smooth_filter_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
                                                          self.options.model.bones[bone_name].getTranslatable(), \
-                                                         config={"freq": 30, "mincutoff": 1, "beta": 1, "dcutoff": 1})
+                                                         config={"freq": 30, "mincutoff": 0.3, "beta": 0.01, "dcutoff": 0.25})
                     logger.info("【フィルタリング%s回目】%s 終了", n - 1, bone_name)
                   
                 logger.info("【不要キー削除%s回目】%s 開始", n, bone_name)
@@ -138,16 +189,61 @@ class ConvertSmoothService():
             return False
     
     # 線形補間で全打ち
-    def prepare_linear(self, bone_name: str):
+    def prepare_linear(self, bone_name: str, is_morph=False):
         try:
             logger.copy(self.options)
 
             logger.info("【スムージング1回目】%s 開始", bone_name)
 
-            # 各ボーンのbfを全打ち(スムージングが複数回数の場合、キー自体は無効のまま)
-            self.options.motion.regist_full_bf(1, [bone_name], offset=1, is_key=(self.options.loop_cnt <= 1))
+            if not is_morph:
+                # 各ボーンのbfを全打ち(スムージングが複数回数の場合、キー自体は無効のまま)
+                self.options.motion.regist_full_bf(1, [bone_name], offset=1, is_key=(self.options.loop_cnt <= 1))
+            else:
+                self.options.motion.regist_full_mf(1, [bone_name], offset=1, is_key=(self.options.loop_cnt <= 1))
             
             logger.info("【スムージング1回目】%s 終了", bone_name)
+
+            return True
+        except SizingException as se:
+            logger.error("スムージング処理が処理できないデータで終了しました。\n\n%s", se.message)
+            return False
+        except Exception as e:
+            logger.error("スムージング処理が意図せぬエラーで終了しました。", e)
+            return False
+        
+    # 曲線補間で全打ち
+    def prepare_curve_morph(self, morph_name: str):
+        try:
+            logger.copy(self.options)
+
+            logger.info("【スムージング1回目】%s 開始", morph_name)
+
+            # 全キーフレを取得
+            fnos = self.options.motion.get_morph_fnos(morph_name)
+            logger.debug("get_morph_fnos morph_name: %s, fnos: %s", morph_name, fnos)
+
+            m_values = []
+            
+            for fno in fnos:
+                mf = self.options.motion.calc_mf(morph_name, fno)
+                m_values.append(mf.ratio)
+            
+            m_all_values = MBezierUtils.calc_value_from_catmullrom(morph_name, fnos, m_values)
+            
+            logger.debug("get_morph_fnos morph_name: %s, m_all_values: %s", morph_name, m_all_values[:10])
+
+            # カトマル曲線で生成した値を全打ち
+            for fno, mr in enumerate(m_all_values):
+                mf = VmdMorphFrame(fno)
+                mf.set_name(morph_name)
+
+                if math.isnan(mr) or math.isinf(mr):
+                    logger.debug("** mr: (%s)%s", fno, mr)
+                
+                mf.ratio = mr
+                self.options.motion.regist_mf(mf, morph_name, fno)
+                
+            logger.info("【スムージング1回目】%s 終了", morph_name)
 
             return True
         except SizingException as se:

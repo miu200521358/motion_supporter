@@ -280,6 +280,7 @@ class MultiSplitPanel(BasePanel):
     def on_convert_multi_split_result(self, event: wx.Event):
         self.elapsed_time = event.elapsed_time
         logger.info("\n処理時間: %s", self.show_worked_time())
+        self.multi_split_btn_ctrl.SetLabel("多段分割")
 
         # 終了音
         self.frame.sound_finish()
