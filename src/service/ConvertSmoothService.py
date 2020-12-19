@@ -35,7 +35,7 @@ class ConvertSmoothService():
                                     vmd=os.path.basename(self.options.motion.path)) # noqa
             service_data_txt = "{service_data_txt}　モデル: {model}({model_name})\n".format(service_data_txt=service_data_txt,
                                     model=os.path.basename(self.options.motion.path), model_name=self.options.model.name) # noqa
-            service_data_txt = "{service_data_txt}　対象ボーン: {bone_names}回\n".format(service_data_txt=service_data_txt,
+            service_data_txt = "{service_data_txt}　対象ボーン: {bone_names}\n".format(service_data_txt=service_data_txt,
                                     bone_names=", ".join(self.options.bone_list)) # noqa
             service_data_txt = "{service_data_txt}　処理回数: {loop_cnt}回\n".format(service_data_txt=service_data_txt,
                                     loop_cnt=self.options.loop_cnt) # noqa

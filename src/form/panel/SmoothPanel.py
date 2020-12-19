@@ -239,7 +239,7 @@ class SmoothPanel(BasePanel):
             self.smooth_btn_ctrl.SetLabel("スムージング停止")
             self.smooth_btn_ctrl.Enable()
 
-            self.convert_smooth_worker = SmoothWorkerThread(self.frame, SmoothThreadEvent, self.frame.is_saving)
+            self.convert_smooth_worker = SmoothWorkerThread(self.frame, SmoothThreadEvent, self.frame.is_saving, self.frame.is_out_log)
             self.convert_smooth_worker.start()
             
             event.Skip()
