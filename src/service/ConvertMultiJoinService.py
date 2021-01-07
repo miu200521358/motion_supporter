@@ -35,7 +35,7 @@ class ConvertMultiJoinService():
             service_data_txt = "{service_data_txt}　不要キー削除: {center_rotation}\n".format(service_data_txt=service_data_txt,
                                     center_rotation=self.options.remove_unnecessary_flg) # noqa
 
-            selections = ["{0} ← 回転X: {1}, 回転Y: {2}, 回転Z: {3}, 移動X: {4}, 移動Y: {5}, 移動Z: {6}" \
+            selections = ["{0} ← 回転(1): {1}, 回転(2): {2}, 回転(3): {3}, 移動(1): {4}, 移動(2): {5}, 移動(3): {6}" \
                           .format(bset[0], bset[1], bset[2], bset[3], bset[4], bset[5], bset[6]) for bset in self.options.target_bones]
             service_data_txt = "{service_data_txt}　対象ボーン: {target_bones}\n".format(service_data_txt=service_data_txt,
                                     target_bones='\n'.join(selections)) # noqa
@@ -104,6 +104,7 @@ class ConvertMultiJoinService():
                 ry_bf = motion.calc_bf(rrybn, fno) if len(rrybn) > 0 else VmdBoneFrame(fno)
                 rz_bf = motion.calc_bf(rrzbn, fno) if len(rrzbn) > 0 else VmdBoneFrame(fno)
                 bf.rotation = ry_bf.rotation * rx_bf.rotation * rz_bf.rotation
+                logger.debug(f"{fno}, {bone_name}, rx: {rx_bf.rotation.toEulerAngles4MMD().to_log()}, ry: {ry_bf.rotation.toEulerAngles4MMD().to_log()}, rz: {rz_bf.rotation.toEulerAngles4MMD().to_log()}")
 
             if model.bones[bone_name].getTranslatable():
                 mx_bf = motion.calc_bf(rmxbn, fno) if len(rmxbn) > 0 else VmdBoneFrame(fno)
