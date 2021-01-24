@@ -13,6 +13,8 @@ cdef bint fit_bezier_mmd(list bzs)
 
 cdef tuple c_join_value_2_bezier(int fno, str bone_name, list values, double offset, double diff_limit)
 
+cdef bint fit_bezier_mmd(list bzs)
+
 cdef tuple convert_catmullrom_2_bezier(np.ndarray xs, np.ndarray ys)
 
 cdef tuple c_evaluate(int x1v, int y1v, int x2v, int y2v, int start, int now, int end)

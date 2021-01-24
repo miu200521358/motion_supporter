@@ -128,6 +128,7 @@ class ParentPanel(BasePanel):
         self.parent_model_file_ctrl.disable()
         self.output_parent_vmd_file_ctrl.disable()
         self.parent_btn_ctrl.Disable()
+        self.remove_unnecessary_flg_ctrl.Disable()
 
     # フォーム無効化
     def enable(self):
@@ -135,6 +136,7 @@ class ParentPanel(BasePanel):
         self.parent_model_file_ctrl.enable()
         self.output_parent_vmd_file_ctrl.enable()
         self.parent_btn_ctrl.Enable()
+        self.remove_unnecessary_flg_ctrl.Enable()
 
     def on_doubleclick(self, event: wx.Event):
         self.timer.Stop()

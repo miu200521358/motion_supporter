@@ -161,6 +161,7 @@ class SmoothPanel(BasePanel):
         self.loop_cnt_ctrl.Disable()
         self.interpolation_ctrl.Disable()
         self.smooth_btn_ctrl.Disable()
+        self.remove_unnecessary_flg_ctrl.Disable()
 
     # フォーム無効化
     def enable(self):
@@ -170,6 +171,7 @@ class SmoothPanel(BasePanel):
         self.loop_cnt_ctrl.Enable()
         self.interpolation_ctrl.Enable()
         self.smooth_btn_ctrl.Enable()
+        self.remove_unnecessary_flg_ctrl.Enable()
 
     def on_doubleclick(self, event: wx.Event):
         self.timer.Stop()

@@ -118,6 +118,7 @@ class LegFKtoIKPanel(BasePanel):
         self.leg_fk2ik_model_file_ctrl.disable()
         self.output_leg_fk2ik_vmd_file_ctrl.disable()
         self.leg_fk2ik_btn_ctrl.Disable()
+        self.remove_unnecessary_flg_ctrl.Disable()
 
     # フォーム無効化
     def enable(self):
@@ -125,6 +126,7 @@ class LegFKtoIKPanel(BasePanel):
         self.leg_fk2ik_model_file_ctrl.enable()
         self.output_leg_fk2ik_vmd_file_ctrl.enable()
         self.leg_fk2ik_btn_ctrl.Enable()
+        self.remove_unnecessary_flg_ctrl.Enable()
 
     def on_doubleclick(self, event: wx.Event):
         self.timer.Stop()

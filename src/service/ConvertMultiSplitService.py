@@ -38,7 +38,7 @@ class ConvertMultiSplitService():
             service_data_txt = "{service_data_txt}　不要キー削除: {center_rotation}\n".format(service_data_txt=service_data_txt,
                                     center_rotation=self.options.remove_unnecessary_flg) # noqa
 
-            selections = ["{0} → 回転X: {1}, 回転Y: {2}, 回転Z: {3}, 移動X: {4}, 移動Y: {5}, 移動Z: {6}" \
+            selections = ["{0} → 回転(1): {1}, 回転(2): {2}, 回転(3): {3}, 移動(1): {4}, 移動(2): {5}, 移動(3): {6}" \
                           .format(bset[0], bset[1], bset[2], bset[3], bset[4], bset[5], bset[6]) for bset in self.options.target_bones]
             service_data_txt = "{service_data_txt}　対象ボーン: {target_bones}\n".format(service_data_txt=service_data_txt,
                                     target_bones='\n'.join(selections)) # noqa
@@ -173,12 +173,13 @@ class ConvertMultiSplitService():
 
         # ローカルX軸
         local_x_axis = model.bones[bone_name].local_x_vector
-        if local_x_axis == MVector3D(1, 0, 0):
+        if local_x_axis == MVector3D(1, 0, 0) or local_x_axis == MVector3D():
             # 指定が無い場合、腕系はローカルX軸、それ以外はノーマル
             if "腕" in bone_name or "ひじ" in bone_name or "手首" in bone_name:
                 local_x_axis = model.get_local_x_axis(bone_name)
             else:
                 local_x_axis = None
+        logger.debug(f"{bone_name}, local_x_axis: {local_x_axis}")
 
         prev_sep_fno = 0
         for fno in fnos:
@@ -438,6 +439,8 @@ class ConvertMultiSplitService():
                 x_qq = MQuaternion.fromEulerAngles(euler.x(), 0, 0)
                 y_qq = MQuaternion.fromEulerAngles(0, euler.y(), 0)
                 z_qq = MQuaternion.fromEulerAngles(0, 0, euler.z())
+            
+            logger.debug(f"fno: {fno}, x_qq: {x_qq.toEulerAngles4MMD().to_log()}, y_qq: {y_qq.toEulerAngles4MMD().to_log()}, z_qq: {z_qq.toEulerAngles4MMD().to_log()}")
 
             if len(rrybn) > 0:
                 ry_bf = motion.calc_bf(rrybn, fno)

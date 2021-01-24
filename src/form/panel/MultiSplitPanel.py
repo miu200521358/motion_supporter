@@ -178,6 +178,7 @@ class MultiSplitPanel(BasePanel):
         self.output_vmd_file_ctrl.disable()
         self.bone_target_btn_ctrl.Disable()
         self.multi_split_btn_ctrl.Disable()
+        self.remove_unnecessary_flg_ctrl.Disable()
 
     # フォーム無効化
     def enable(self):
@@ -186,6 +187,7 @@ class MultiSplitPanel(BasePanel):
         self.output_vmd_file_ctrl.enable()
         self.bone_target_btn_ctrl.Enable()
         self.multi_split_btn_ctrl.Enable()
+        self.remove_unnecessary_flg_ctrl.Enable()
 
     def on_doubleclick(self, event: wx.Event):
         self.timer.Stop()

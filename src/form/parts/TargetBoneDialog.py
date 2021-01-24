@@ -15,7 +15,7 @@ logger = MLogger(__name__)
 class TargetBoneDialog(wx.Dialog):
 
     def __init__(self, frame: wx.Frame, panel: wx.Panel, direction: str, type: str):
-        super().__init__(frame, id=wx.ID_ANY, title="{0}ボーン指定".format(type), pos=(-1, -1), size=(850, 450), style=wx.DEFAULT_DIALOG_STYLE, name="TargetBoneDialog")
+        super().__init__(frame, id=wx.ID_ANY, title=f"{type}ボーン指定", pos=(-1, -1), size=(850, 450), style=wx.DEFAULT_DIALOG_STYLE, name="TargetBoneDialog")
 
         self.frame = frame
         self.panel = panel
@@ -35,8 +35,9 @@ class TargetBoneDialog(wx.Dialog):
         self.sizer = wx.BoxSizer(wx.VERTICAL)
 
         # 説明文
-        self.description_txt = wx.StaticText(self, wx.ID_ANY, u"多段{0}したいボーン名を選択・入力してください。プルダウン欄にボーン名の一部を入力して絞り込みをかける事ができます。\n" \
-                                             + "プルダウン欄にボーン名を入力した場合、変換ENTERの後、もう一度ENTERを押すと、移動・回転の各ボーンに同ボーン名が入ります。".format(type), wx.DefaultPosition, wx.DefaultSize, 0)
+        self.description_txt = wx.StaticText(self, wx.ID_ANY, f"多段{type}したいボーン名を選択・入力してください。プルダウン欄にボーン名の一部を入力して絞り込みをかける事ができます。\n" \
+                                             + "プルダウン欄にボーン名を入力した場合、変換ENTERの後、もう一度ENTERを押すと、移動・回転の各ボーンに同ボーン名が入ります。\n" \
+                                             + "多段ボーンは3つまで指定する事ができます。軸ごとに中身の成分が分かれていてもごちゃ混ぜでも、どちらでもOKです。", wx.DefaultPosition, wx.DefaultSize, 0)
         self.sizer.Add(self.description_txt, 0, wx.ALL, 5)
 
         # ボタン
@@ -90,27 +91,27 @@ class TargetBoneDialog(wx.Dialog):
         self.name_arrow_txt.Wrap(-1)
         self.grid_sizer.Add(self.name_arrow_txt, 0, wx.CENTER | wx.ALL, 5)
 
-        self.rotate_x_txt = wx.StaticText(self.window, wx.ID_ANY, "回転X", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.rotate_x_txt = wx.StaticText(self.window, wx.ID_ANY, "回転(1)", wx.DefaultPosition, wx.DefaultSize, 0)
         self.rotate_x_txt.Wrap(-1)
         self.grid_sizer.Add(self.rotate_x_txt, 0, wx.ALL, 5)
 
-        self.rotate_y_txt = wx.StaticText(self.window, wx.ID_ANY, "回転Y", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.rotate_y_txt = wx.StaticText(self.window, wx.ID_ANY, "回転(2)", wx.DefaultPosition, wx.DefaultSize, 0)
         self.rotate_y_txt.Wrap(-1)
         self.grid_sizer.Add(self.rotate_y_txt, 0, wx.ALL, 5)
 
-        self.rotate_z_txt = wx.StaticText(self.window, wx.ID_ANY, "回転Z", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.rotate_z_txt = wx.StaticText(self.window, wx.ID_ANY, "回転(3)", wx.DefaultPosition, wx.DefaultSize, 0)
         self.rotate_z_txt.Wrap(-1)
         self.grid_sizer.Add(self.rotate_z_txt, 0, wx.ALL, 5)
 
-        self.move_x_txt = wx.StaticText(self.window, wx.ID_ANY, "移動X", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.move_x_txt = wx.StaticText(self.window, wx.ID_ANY, "移動(1)", wx.DefaultPosition, wx.DefaultSize, 0)
         self.move_x_txt.Wrap(-1)
         self.grid_sizer.Add(self.move_x_txt, 0, wx.ALL, 5)
 
-        self.move_y_txt = wx.StaticText(self.window, wx.ID_ANY, "移動Y", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.move_y_txt = wx.StaticText(self.window, wx.ID_ANY, "移動(2)", wx.DefaultPosition, wx.DefaultSize, 0)
         self.move_y_txt.Wrap(-1)
         self.grid_sizer.Add(self.move_y_txt, 0, wx.ALL, 5)
 
-        self.move_z_txt = wx.StaticText(self.window, wx.ID_ANY, "移動Z", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.move_z_txt = wx.StaticText(self.window, wx.ID_ANY, "移動(3)", wx.DefaultPosition, wx.DefaultSize, 0)
         self.move_z_txt.Wrap(-1)
         self.grid_sizer.Add(self.move_z_txt, 0, wx.ALL, 5)
 
