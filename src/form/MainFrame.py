@@ -9,6 +9,7 @@ from form.panel.NoisePanel import NoisePanel
 from form.panel.MultiSplitPanel import MultiSplitPanel
 from form.panel.MultiJoinPanel import MultiJoinPanel
 from form.panel.ArmIKtoFKPanel import ArmIKtoFKPanel
+from form.panel.ArmTwistOffPanel import ArmTwistOffPanel
 from form.panel.LegFKtoIKPanel import LegFKtoIKPanel
 from form.panel.BlendPanel import BlendPanel
 from form.panel.BezierPanel import BezierPanel
@@ -110,6 +111,10 @@ class MainFrame(wx.Frame):
         # # 腕IKtoFKタブ
         # self.arm_ik2fk_panel_ctrl = ArmIKtoFKPanel(self, self.note_ctrl, 9)
         # self.note_ctrl.AddPage(self.arm_ik2fk_panel_ctrl, u"腕IKtoFK", False)
+        
+        # 腕IKtoFKタブ
+        self.arm_twist_off_panel_ctrl = ArmTwistOffPanel(self, self.note_ctrl, 9)
+        self.note_ctrl.AddPage(self.arm_twist_off_panel_ctrl, u"捩りOFF", False)
         
         # ---------------------------------------------
 

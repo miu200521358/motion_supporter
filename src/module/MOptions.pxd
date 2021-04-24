@@ -91,6 +91,20 @@ cdef class MArmIKtoFKOptions:
     cdef public int max_workers
 
 
+cdef class MArmTwistOffOptions:
+    cdef public str version_name
+    cdef public int logging_level
+    cdef public VmdMotion motion
+    cdef public PmxModel model
+    cdef public list target_bones
+    cdef public str output_path
+    cdef public bint remove_unnecessary_flg
+    cdef public object monitor
+    cdef public bint is_file
+    cdef public str outout_datetime
+    cdef public int max_workers
+
+
 cdef class MMultiSplitOptions:
     cdef public str version_name
     cdef public int logging_level
