@@ -112,9 +112,9 @@ class MainFrame(wx.Frame):
         # self.arm_ik2fk_panel_ctrl = ArmIKtoFKPanel(self, self.note_ctrl, 9)
         # self.note_ctrl.AddPage(self.arm_ik2fk_panel_ctrl, u"腕IKtoFK", False)
         
-        # 腕IKtoFKタブ
-        self.arm_twist_off_panel_ctrl = ArmTwistOffPanel(self, self.note_ctrl, 9)
-        self.note_ctrl.AddPage(self.arm_twist_off_panel_ctrl, u"捩りOFF", False)
+        # # 捩りOFFタブ
+        # self.arm_twist_off_panel_ctrl = ArmTwistOffPanel(self, self.note_ctrl, 9)
+        # self.note_ctrl.AddPage(self.arm_twist_off_panel_ctrl, u"捩りOFF", False)
         
         # ---------------------------------------------
 
