@@ -81,7 +81,8 @@ cdef class MArmIKtoFKOptions:
     cdef public str version_name
     cdef public int logging_level
     cdef public VmdMotion motion
-    cdef public PmxModel model
+    cdef public PmxModel ik_model
+    cdef public PmxModel fk_model
     cdef public list target_bones
     cdef public str output_path
     cdef public bint remove_unnecessary_flg

@@ -35,14 +35,16 @@ class ArmIKtoFKWorkerThread(BaseWorkerThread):
             start = time.time()
 
             self.result = self.frame.arm_ik2fk_panel_ctrl.arm_ik2fk_vmd_file_ctrl.load() and self.result
-            self.result = self.frame.arm_ik2fk_panel_ctrl.arm_ik2fk_model_file_ctrl.load(is_check=False) and self.result
+            self.result = self.frame.arm_ik2fk_panel_ctrl.arm_ik2fk_ik_model_file_ctrl.load(is_check=False) and self.result
+            self.result = self.frame.arm_ik2fk_panel_ctrl.arm_ik2fk_fk_model_file_ctrl.load(is_check=False) and self.result
 
             if self.result:
                 self.options = MArmIKtoFKOptions(\
                     version_name=self.frame.version_name, \
                     logging_level=self.frame.logging_level, \
                     motion=self.frame.arm_ik2fk_panel_ctrl.arm_ik2fk_vmd_file_ctrl.data.copy(), \
-                    model=self.frame.arm_ik2fk_panel_ctrl.arm_ik2fk_model_file_ctrl.data, \
+                    ik_model=self.frame.arm_ik2fk_panel_ctrl.arm_ik2fk_ik_model_file_ctrl.data, \
+                    fk_model=self.frame.arm_ik2fk_panel_ctrl.arm_ik2fk_fk_model_file_ctrl.data, \
                     output_path=self.frame.arm_ik2fk_panel_ctrl.output_arm_ik2fk_vmd_file_ctrl.file_ctrl.GetPath(), \
                     remove_unnecessary_flg=self.frame.arm_ik2fk_panel_ctrl.remove_unnecessary_flg_ctrl.GetValue(), \
                     monitor=self.frame.arm_ik2fk_panel_ctrl.console_ctrl, \

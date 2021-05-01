@@ -28,7 +28,8 @@ class ArmIKtoFKPanel(BasePanel):
 
         self.header_sizer = wx.BoxSizer(wx.VERTICAL)
 
-        self.description_txt = wx.StaticText(self, wx.ID_ANY, u"腕IKを腕FK（腕・ひじ・手首）に変換します" \
+        self.description_txt = wx.StaticText(self, wx.ID_ANY, u"腕IKを腕FK（腕・ひじ・手首）に変換します。元モデルには腕ＩＫが入ったモデルを指定してください。" \
+                                             + "\n捩りは統合しちゃいますので、必要に応じてサイジングで捩り分散をかけてください。"
                                              + "\n不要キー削除を行うと、キーが間引きされます。キー間がオリジナルから多少ずれ、またそれなりに時間がかかります。", wx.DefaultPosition, wx.DefaultSize, 0)
         self.header_sizer.Add(self.description_txt, 0, wx.ALL, 5)
 
@@ -42,12 +43,19 @@ class ArmIKtoFKPanel(BasePanel):
                                                              is_aster=False, is_save=False, set_no=1)
         self.header_sizer.Add(self.arm_ik2fk_vmd_file_ctrl.sizer, 1, wx.EXPAND, 0)
 
-        # 対象PMXファイルコントロール
-        self.arm_ik2fk_model_file_ctrl = HistoryFilePickerCtrl(self.frame, self, u"適用モデルPMX", u"適用モデルPMXファイルを開く", ("pmx"), wx.FLP_DEFAULT_STYLE, \
-                                                               u"モーションを適用したいモデルのPMXパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。", \
+        # 対象PMXファイルコントロール(IK)
+        self.arm_ik2fk_ik_model_file_ctrl = HistoryFilePickerCtrl(self.frame, self, u"腕ＩＫありモデルPMX", u"腕ＩＫありモデルPMXファイルを開く", ("pmx"), wx.FLP_DEFAULT_STYLE, \
+                                                               u"腕ＩＫモーションを適用したいモデルのPMXパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。", \
                                                                file_model_spacer=60, title_parts_ctrl=None, title_parts2_ctrl=None, file_histories_key="arm_ik2fk_pmx", \
                                                                is_change_output=True, is_aster=False, is_save=False, set_no=1)
-        self.header_sizer.Add(self.arm_ik2fk_model_file_ctrl.sizer, 1, wx.EXPAND, 0)
+        self.header_sizer.Add(self.arm_ik2fk_ik_model_file_ctrl.sizer, 1, wx.EXPAND, 0)
+
+        # 対象PMXファイルコントロール(FK)
+        self.arm_ik2fk_fk_model_file_ctrl = HistoryFilePickerCtrl(self.frame, self, u"腕ＩＫなしモデルPMX", u"腕ＩＫなしモデルPMXファイルを開く", ("pmx"), wx.FLP_DEFAULT_STYLE, \
+                                                               u"変換後の腕FKモーションを適用したいモデルのPMXパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。", \
+                                                               file_model_spacer=60, title_parts_ctrl=None, title_parts2_ctrl=None, file_histories_key="arm_ik2fk_pmx_fk", \
+                                                               is_change_output=True, is_aster=False, is_save=False, set_no=1)
+        self.header_sizer.Add(self.arm_ik2fk_fk_model_file_ctrl.sizer, 1, wx.EXPAND, 0)
 
         # 出力先VMDファイルコントロール
         self.output_arm_ik2fk_vmd_file_ctrl = BaseFilePickerCtrl(frame, self, u"出力対象VMD", u"出力対象VMDファイルを開く", ("vmd"), wx.FLP_OVERWRITE_PROMPT | wx.FLP_SAVE | wx.FLP_USE_TEXTCTRL, \
@@ -102,7 +110,7 @@ class ArmIKtoFKPanel(BasePanel):
     def set_output_vmd_path(self, event, is_force=False):
         output_arm_ik2fk_vmd_path = MFileUtils.get_output_arm_ik2fk_vmd_path(
             self.arm_ik2fk_vmd_file_ctrl.file_ctrl.GetPath(),
-            self.arm_ik2fk_model_file_ctrl.file_ctrl.GetPath(),
+            self.arm_ik2fk_fk_model_file_ctrl.file_ctrl.GetPath(),
             self.output_arm_ik2fk_vmd_file_ctrl.file_ctrl.GetPath(), is_force)
 
         self.output_arm_ik2fk_vmd_file_ctrl.file_ctrl.SetPath(output_arm_ik2fk_vmd_path)
@@ -113,14 +121,16 @@ class ArmIKtoFKPanel(BasePanel):
     # フォーム無効化
     def disable(self):
         self.arm_ik2fk_vmd_file_ctrl.disable()
-        self.arm_ik2fk_model_file_ctrl.disable()
+        self.arm_ik2fk_ik_model_file_ctrl.disable()
+        self.arm_ik2fk_fk_model_file_ctrl.disable()
         self.output_arm_ik2fk_vmd_file_ctrl.disable()
         self.arm_ik2fk_btn_ctrl.Disable()
 
     # フォーム無効化
     def enable(self):
         self.arm_ik2fk_vmd_file_ctrl.enable()
-        self.arm_ik2fk_model_file_ctrl.enable()
+        self.arm_ik2fk_ik_model_file_ctrl.enable()
+        self.arm_ik2fk_fk_model_file_ctrl.enable()
         self.output_arm_ik2fk_vmd_file_ctrl.enable()
         self.arm_ik2fk_btn_ctrl.Enable()
 
@@ -150,14 +160,15 @@ class ArmIKtoFKPanel(BasePanel):
         sys.stdout = self.console_ctrl
 
         self.arm_ik2fk_vmd_file_ctrl.save()
-        self.arm_ik2fk_model_file_ctrl.save()
+        self.arm_ik2fk_ik_model_file_ctrl.save()
+        self.arm_ik2fk_fk_model_file_ctrl.save()
 
         # JSON出力
         MFileUtils.save_history(self.frame.mydir_path, self.frame.file_hitories)
 
         self.elapsed_time = 0
         result = True
-        result = self.arm_ik2fk_vmd_file_ctrl.is_valid() and self.arm_ik2fk_model_file_ctrl.is_valid() and result
+        result = self.arm_ik2fk_vmd_file_ctrl.is_valid() and self.arm_ik2fk_ik_model_file_ctrl.is_valid() and self.arm_ik2fk_fk_model_file_ctrl.is_valid() and result
 
         if not result:
             # 終了音

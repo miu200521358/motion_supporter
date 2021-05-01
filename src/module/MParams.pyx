@@ -67,7 +67,15 @@ cdef class BoneLinks:
                 new_links.append(self.__links[lkey])
                 
         return new_links
-        
+
+    # ボーンリンクコピー
+    def copy(self, bone_name: str):
+        new_links = BoneLinks()
+        for lidx, lkey in enumerate(self.__links.keys()):
+            new_links.append(self.__links[lkey])
+                
+        return new_links
+                
     # 最後のリンク名を取得する
     def last_name(self):
         if not self.__links:

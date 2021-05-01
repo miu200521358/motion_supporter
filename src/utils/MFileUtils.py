@@ -27,7 +27,7 @@ def resource_path(relative):
 def read_history(mydir_path):
     # ファイル履歴
     base_file_hitories = {"parent_vmd": [], "parent_pmx": [], "noise_vmd": [], "multi_split_vmd": [], "multi_split_pmx": [], \
-                          "multi_join_vmd": [], "multi_join_pmx": [], "leg_fk2ik_vmd": [], "leg_fk2ik_pmx": [], "arm_ik2fk_vmd": [], "arm_ik2fk_pmx": [], \
+                          "multi_join_vmd": [], "multi_join_pmx": [], "leg_fk2ik_vmd": [], "leg_fk2ik_pmx": [], "arm_ik2fk_vmd": [], "arm_ik2fk_pmx": [], "arm_ik2fk_pmx_fk": [], \
                           "smooth_vmd": [], "smooth_pmx": [], "arm_twist_off_vmd": [], "arm_twist_off_pmx": [], "max": 50}
     file_hitories = cPickle.loads(cPickle.dumps(base_file_hitories, -1))
 
