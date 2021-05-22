@@ -338,30 +338,6 @@ class PmxReader:
                 pmx.bones[head_top_bone.name] = head_top_bone
                 pmx.bone_indexes[head_top_bone.index] = head_top_bone.name
 
-                if "右足ＩＫ" in pmx.bones or "右つま先ＩＫ" in pmx.bones:
-                    # 右つま先ボーン
-                    right_toe_vertex = pmx.get_toe_vertex("右")
-                    if right_toe_vertex:
-                        pmx.right_toe_vertex = right_toe_vertex
-                        right_toe_pos = right_toe_vertex.position.copy()
-                        right_toe_pos.setY(0)
-                        right_toe_bone = Bone("右つま先実体", "right toe entity", right_toe_pos, -1, 0, 0)
-                        right_toe_bone.index = len(pmx.bones.keys())
-                        pmx.bones[right_toe_bone.name] = right_toe_bone
-                        pmx.bone_indexes[right_toe_bone.index] = right_toe_bone.name
-
-                if "左足ＩＫ" in pmx.bones or "左つま先ＩＫ" in pmx.bones:
-                    # 左つま先ボーン
-                    left_toe_vertex = pmx.get_toe_vertex("左")
-                    if left_toe_vertex:
-                        pmx.left_toe_vertex = left_toe_vertex
-                        left_toe_pos = left_toe_vertex.position.copy()
-                        left_toe_pos.setY(0)
-                        left_toe_bone = Bone("左つま先実体", "left toe entity", left_toe_pos, -1, 0, 0)
-                        left_toe_bone.index = len(pmx.bones.keys())
-                        pmx.bones[left_toe_bone.name] = left_toe_bone
-                        pmx.bone_indexes[left_toe_bone.index] = left_toe_bone.name
-
                 if "右足先EX" in pmx.bones or "右足ＩＫ" in pmx.bones:
                     # 右足底実体ボーン
                     right_sole_vertex = None
@@ -374,6 +350,12 @@ class PmxReader:
                         pmx.right_sole_vertex = right_sole_vertex
                         right_sole_bone = Bone("右足底実体", "right sole entity", right_sole_vertex.position.copy(), -1, 0, 0)
                         right_sole_bone.index = len(pmx.bones.keys())
+                        
+                        if "右足先EX" in pmx.bones:
+                            right_sole_bone.parent_index = pmx.bones["右足先EX"].index
+                        else:
+                            right_sole_bone.parent_index = pmx.bones["右足首"].index
+
                         pmx.bones[right_sole_bone.name] = right_sole_bone
                         pmx.bone_indexes[right_sole_bone.index] = right_sole_bone.name
 
@@ -389,8 +371,50 @@ class PmxReader:
                         pmx.left_sole_vertex = left_sole_vertex
                         left_sole_bone = Bone("左足底実体", "left sole entity", left_sole_vertex.position.copy(), -1, 0, 0)
                         left_sole_bone.index = len(pmx.bones.keys())
+
+                        if "左足先EX" in pmx.bones:
+                            left_sole_bone.parent_index = pmx.bones["左足先EX"].index
+                        else:
+                            left_sole_bone.parent_index = pmx.bones["左足首"].index
+
                         pmx.bones[left_sole_bone.name] = left_sole_bone
                         pmx.bone_indexes[left_sole_bone.index] = left_sole_bone.name
+
+                if "右足ＩＫ" in pmx.bones or "右つま先ＩＫ" in pmx.bones:
+                    # 右つま先ボーン
+                    right_toe_vertex = pmx.get_toe_vertex("右")
+                    if right_toe_vertex:
+                        pmx.right_toe_vertex = right_toe_vertex
+                        right_toe_pos = right_toe_vertex.position.copy()
+                        right_toe_pos.setY(0)
+                        right_toe_bone = Bone("右つま先実体", "right toe entity", right_toe_pos, -1, 0, 0)
+                        right_toe_bone.index = len(pmx.bones.keys())
+
+                        if "右足底実体" in pmx.bones:
+                            right_toe_bone.parent_index = pmx.bones["右足底実体"].index
+                        else:
+                            right_toe_bone.parent_index = pmx.bones["右足首"].index
+
+                        pmx.bones[right_toe_bone.name] = right_toe_bone
+                        pmx.bone_indexes[right_toe_bone.index] = right_toe_bone.name
+
+                if "左足ＩＫ" in pmx.bones or "左つま先ＩＫ" in pmx.bones:
+                    # 左つま先ボーン
+                    left_toe_vertex = pmx.get_toe_vertex("左")
+                    if left_toe_vertex:
+                        pmx.left_toe_vertex = left_toe_vertex
+                        left_toe_pos = left_toe_vertex.position.copy()
+                        left_toe_pos.setY(0)
+                        left_toe_bone = Bone("左つま先実体", "left toe entity", left_toe_pos, -1, 0, 0)
+                        left_toe_bone.index = len(pmx.bones.keys())
+
+                        if "左足底実体" in pmx.bones:
+                            left_toe_bone.parent_index = pmx.bones["左足底実体"].index
+                        else:
+                            left_toe_bone.parent_index = pmx.bones["左足首"].index
+
+                        pmx.bones[left_toe_bone.name] = left_toe_bone
+                        pmx.bone_indexes[left_toe_bone.index] = left_toe_bone.name
 
                 if "右足ＩＫ" in pmx.bones:
                     # 右足ＩＫ底実体ボーン

@@ -338,6 +338,30 @@ def get_output_split_bone_path(base_file_path: str, pmx_path: str):
     return new_output_bone_path
     
 
+# 接地設定ファイル
+def get_output_leg_ground_path(base_file_path: str, pmx_path: str):
+    # モーションVMDパスの拡張子リスト
+    if os.path.exists(base_file_path):
+        file_path_list = [base_file_path]
+    else:
+        file_path_list = [p for p in glob.glob(base_file_path) if os.path.isfile(p)]
+
+    if len(file_path_list) == 0 or (len(file_path_list) > 0 and not os.path.exists(file_path_list[0])) or not os.path.exists(pmx_path):
+        return ""
+
+    # モーションVMDディレクトリパス
+    motion_vmd_dir_path = get_dir_path(file_path_list[0])
+    # モーションVMDファイル名・拡張子
+    motion_vmd_file_name, motion_vmd_ext = os.path.splitext(os.path.basename(file_path_list[0]))
+    # 変換先モデルファイル名・拡張子
+    pmx_file_name, _ = os.path.splitext(os.path.basename(pmx_path))
+
+    # 出力ファイルパス生成
+    new_output_bone_path = os.path.join(motion_vmd_dir_path, "{0}_{1}{2}".format(motion_vmd_file_name, pmx_file_name, ".csv"))
+
+    return new_output_bone_path
+
+
 def get_output_multi_join_vmd_path(base_file_path: str, pmx_path: str, output_multi_join_vmd_path: str, is_force=False):
     # モーションVMDパスの拡張子リスト
     if not os.path.exists(base_file_path) or not os.path.exists(pmx_path):
