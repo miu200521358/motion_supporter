@@ -38,7 +38,7 @@ class ConvertMultiSplitService():
             service_data_txt = "{service_data_txt}　不要キー削除: {center_rotation}\n".format(service_data_txt=service_data_txt,
                                     center_rotation=self.options.remove_unnecessary_flg) # noqa
 
-            selections = ["{0} → 回転(1): {1}, 回転(2): {2}, 回転(3): {3}, 移動(1): {4}, 移動(2): {5}, 移動(3): {6}" \
+            selections = ["{0} → 回転(X): {1}, 回転(Y): {2}, 回転(Z): {3}, 移動(X): {4}, 移動(Y): {5}, 移動(Z): {6}" \
                           .format(bset[0], bset[1], bset[2], bset[3], bset[4], bset[5], bset[6]) for bset in self.options.target_bones]
             service_data_txt = "{service_data_txt}　対象ボーン: {target_bones}\n".format(service_data_txt=service_data_txt,
                                     target_bones='\n'.join(selections)) # noqa
@@ -442,55 +442,55 @@ class ConvertMultiSplitService():
             
             logger.debug(f"fno: {fno}, x_qq: {x_qq.toEulerAngles4MMD().to_log()}, y_qq: {y_qq.toEulerAngles4MMD().to_log()}, z_qq: {z_qq.toEulerAngles4MMD().to_log()}")
 
-            if len(rrybn) > 0:
+            if len(rrybn) > 0 and rrybn != bf.name:
                 ry_bf = motion.calc_bf(rrybn, fno)
-                ry_bf.rotation = y_qq * ry_bf.rotation
+                ry_bf.rotation *= y_qq
                 motion.regist_bf(ry_bf, ry_bf.name, fno)
                 # 減算
                 bf.rotation *= y_qq.inverted()
 
-            if len(rrxbn) > 0:
+            if len(rrxbn) > 0 and rrxbn != bf.name:
                 rx_bf = motion.calc_bf(rrxbn, fno)
-                rx_bf.rotation = x_qq * rx_bf.rotation
+                rx_bf.rotation *= x_qq
                 motion.regist_bf(rx_bf, rx_bf.name, fno)
                 # 減算
                 bf.rotation *= x_qq.inverted()
 
-            if len(rrzbn) > 0:
+            if len(rrzbn) > 0 and rrzbn != bf.name:
                 rz_bf = motion.calc_bf(rrzbn, fno)
-                rz_bf.rotation = z_qq * rz_bf.rotation
+                rz_bf.rotation *= z_qq
                 motion.regist_bf(rz_bf, rz_bf.name, fno)
                 # 減算
                 bf.rotation *= z_qq.inverted()
 
-            if len(rrxbn) > 0 and len(rrybn) > 0 and len(rrzbn) > 0:
+            if len(rrxbn) > 0 and rrybn != bf.name and len(rrybn) > 0 and rrxbn != bf.name and len(rrzbn) > 0 and rrzbn != bf.name:
                 bf.rotation = MQuaternion()
                 motion.regist_bf(bf, bf.name, fno)
         
         if model.bones[bone_name].getTranslatable():
             # 移動を分ける
-            if len(rmxbn) > 0:
+            if len(rmxbn) > 0 and rmxbn != bf.name:
                 mx_bf = motion.calc_bf(rmxbn, fno)
                 mx_bf.position.setX(mx_bf.position.x() + bf.position.x())
                 motion.regist_bf(mx_bf, mx_bf.name, fno)
                 # 減算
                 bf.position.setX(0)
 
-            if len(rmybn) > 0:
+            if len(rmybn) > 0 and rmybn != bf.name:
                 my_bf = motion.calc_bf(rmybn, fno)
                 my_bf.position.setY(my_bf.position.y() + bf.position.y())
                 motion.regist_bf(my_bf, my_bf.name, fno)
                 # 減算
                 bf.position.setY(0)
 
-            if len(rmzbn) > 0:
+            if len(rmzbn) > 0 and rmzbn != bf.name:
                 mz_bf = motion.calc_bf(rmzbn, fno)
                 mz_bf.position.setZ(mz_bf.position.z() + bf.position.z())
                 motion.regist_bf(mz_bf, mz_bf.name, fno)
                 # 減算
                 bf.position.setZ(0)
 
-            if len(rmxbn) > 0 and len(rmybn) > 0 and len(rmzbn) > 0:
+            if len(rmxbn) > 0 and rmxbn != bf.name and len(rmybn) > 0 and rmybn != bf.name and len(rmzbn) > 0 and rmzbn != bf.name:
                 bf.position = MVector3D()
                 motion.regist_bf(bf, bf.name, fno)
 
@@ -504,11 +504,11 @@ class ConvertMultiSplitService():
         except MKilledException as ke:
             raise ke
         except SizingException as se:
-            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
+            logger.error("多段分割処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
             return se
         except Exception as e:
             import traceback
-            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            logger.critical("多段分割処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc(), decoration=MLogger.DECORATION_BOX)
             raise e
 
     # 不要キー削除
@@ -526,11 +526,11 @@ class ConvertMultiSplitService():
         except MKilledException as ke:
             raise ke
         except SizingException as se:
-            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
+            logger.error("多段分割処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
             return se
         except Exception as e:
             import traceback
-            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            logger.critical("多段分割処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc(), decoration=MLogger.DECORATION_BOX)
             raise e
 
 

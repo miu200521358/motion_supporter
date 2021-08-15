@@ -77,8 +77,8 @@ class LegFKtoIKPanel(BasePanel):
 
         self.setting_flg_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.ankle_horizonal_flg_ctrl = wx.CheckBox(self, wx.ID_ANY, u"初期足首水平化", wx.DefaultPosition, wx.DefaultSize, 0)
-        self.ankle_horizonal_flg_ctrl.SetToolTip(u"チェックを入れると、初期値が指定されている足首キーフレを地面と水平になるように角度を調整します。")
+        self.ankle_horizonal_flg_ctrl = wx.CheckBox(self, wx.ID_ANY, u"足首水平化", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.ankle_horizonal_flg_ctrl.SetToolTip(u"チェックを入れると、水平に近い足首キーフレを地面と水平になるように角度を調整します。")
         self.setting_flg_sizer.Add(self.ankle_horizonal_flg_ctrl, 0, wx.ALL, 5)
 
         self.ground_leg_flg_ctrl = wx.CheckBox(self, wx.ID_ANY, u"かかと・つま先Y=0", wx.DefaultPosition, wx.DefaultSize, 0)

@@ -5,6 +5,7 @@ import os
 import traceback
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor
+import numpy as np
 
 from module.MOptions import MLegFKtoIKOptions, MOptionsDataSet
 from mmd.PmxData import PmxModel # noqa
@@ -83,25 +84,10 @@ class ConvertLegFKtoIKService():
     
     # 足首の水平化
     def prepare_ankle_horizonal(self):
-        logger.info("初期足首水平化", decoration=MLogger.DECORATION_LINE)
+        logger.info("足首水平化", decoration=MLogger.DECORATION_LINE)
 
         motion = self.options.motion
         model = self.options.model
-
-        # グルーブに値が入ってる場合、Yはグルーブに入れる
-        center_x_bone_name = "センター"
-        if not motion.is_active_bones("センター") and motion.is_active_bones("センターMX"):
-            center_x_bone_name = "センターMX"
-
-        center_y_bone_name = "センター"
-        if motion.is_active_bones("グルーブ"):
-            center_y_bone_name = "グルーブ"
-        elif not motion.is_active_bones("センター") and motion.is_active_bones("センターMX"):
-            center_y_bone_name = "グルーブMY"
-
-        center_z_bone_name = "センター"
-        if not motion.is_active_bones("センター") and motion.is_active_bones("センターMZ"):
-            center_z_bone_name = "センターMZ"
 
         # 足首角度
         for direction in ["右", "左"]:
@@ -119,26 +105,44 @@ class ConvertLegFKtoIKService():
             if f"{direction}つま先実体" in model.bones:
                 ankle_fk_links.append(model.bones[f"{direction}つま先実体"])
 
+            big_toe_links = model.create_link_2_top_one(f'{direction}足親指', is_defined=False)
+            small_toe_links = model.create_link_2_top_one(f'{direction}足小指', is_defined=False)
+            heel_links = model.create_link_2_top_one(f'{direction}かかと', is_defined=False)
+
+            _, big_toe_mats = MServiceUtils.calc_global_pos(model, big_toe_links, VmdMotion(), 0, return_matrix=True)
+            _, small_toe_mats = MServiceUtils.calc_global_pos(model, small_toe_links, VmdMotion(), 0, return_matrix=True)
+
             # 指定範囲内の足首キーフレを取得
             fnos = motion.get_bone_fnos(f"{direction}足首")
 
             for fidx, fno in enumerate(fnos):
-                toe_bf = motion.calc_bf(f"{direction}足首", fno)
+                ankle_bf = motion.calc_bf(f"{direction}足首", fno)
 
-                if toe_bf.rotation == MQuaternion():
-                    toe_fk_3ds, toe_fk_matrixs = MServiceUtils.calc_global_pos(model, ankle_fk_links, motion, fno, return_matrix=True)
-                    toe_pos = toe_fk_3ds[f"{direction}つま先実体"]
-                    sole_pos = toe_fk_3ds[f"{direction}足底実体"]
+                big_toe_3ds = MServiceUtils.calc_global_pos(model, big_toe_links, motion, fno)
+                small_toe_3ds = MServiceUtils.calc_global_pos(model, small_toe_links, motion, fno)
+                _, heel_mats = MServiceUtils.calc_global_pos(model, heel_links, motion, fno, return_matrix=True)
 
-                    toe_slope_from_pos = toe_pos
-                    toe_slope_to_pos = MVector3D(toe_pos.x(), sole_pos.y(), toe_pos.z())
+                now_big_toe_relative_vec = heel_mats[heel_links.last_name()].inverted() * big_toe_3ds[big_toe_links.last_name()]
+                now_small_toe_relative_vec = heel_mats[heel_links.last_name()].inverted() * small_toe_3ds[small_toe_links.last_name()]
 
-                    toe_slope_from_local_pos = toe_fk_matrixs[f"{direction}足底実体"].inverted() * toe_slope_from_pos
-                    toe_slope_to_local_pos = toe_fk_matrixs[f"{direction}足底実体"].inverted() * toe_slope_to_pos
+                now_big_slope = abs(MVector3D.dotProduct(MVector3D(now_big_toe_relative_vec.x(), 0, now_big_toe_relative_vec.z()).normalized(), now_big_toe_relative_vec.normalized()))
+                now_small_slope = abs(MVector3D.dotProduct(MVector3D(now_small_toe_relative_vec.x(), 0, now_small_toe_relative_vec.z()).normalized(), now_small_toe_relative_vec.normalized()))
+
+                if (np.average([now_big_slope, now_small_slope]) > 0.92):
+                    # 大体水平の場合、足首の角度を初期化する
+                    ankle_fk_3ds, ankle_fk_matrixs = MServiceUtils.calc_global_pos(model, ankle_fk_links, motion, fno, return_matrix=True)
+                    ankle_pos = ankle_fk_3ds[f"{direction}つま先実体"]
+                    sole_pos = ankle_fk_3ds[f"{direction}足底実体"]
+
+                    ankle_slope_from_pos = ankle_pos
+                    ankle_slope_to_pos = MVector3D(ankle_pos.x(), sole_pos.y(), ankle_pos.z())
+
+                    ankle_slope_from_local_pos = ankle_fk_matrixs[f"{direction}足底実体"].inverted() * ankle_slope_from_pos
+                    ankle_slope_to_local_pos = ankle_fk_matrixs[f"{direction}足底実体"].inverted() * ankle_slope_to_pos
 
                     # 足首角度を調整する
-                    toe_bf.rotation = MQuaternion.rotationTo(toe_slope_from_local_pos, toe_slope_to_local_pos)
-                    motion.regist_bf(toe_bf, toe_bf.name, fno)
+                    ankle_bf.rotation = MQuaternion.rotationTo(ankle_slope_from_local_pos, ankle_slope_to_local_pos)
+                    motion.regist_bf(ankle_bf, ankle_bf.name, fno)
 
                 if fno // 500 > prev_sep_fno:
                     logger.count(f"【初期足首水平化（{direction}）】", fno, fnos)

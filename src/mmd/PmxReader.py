@@ -452,6 +452,46 @@ class PmxReader:
                     pmx.bones[left_ik_sole_bone.name] = left_ik_sole_bone
                     pmx.bone_indexes[left_ik_sole_bone.index] = left_ik_sole_bone.name
 
+                    if "右足首" in pmx.bones:
+                        right_heel_bone = Bone("右かかと", "", MVector3D(pmx.bones["右足首"].position.x(), 0, pmx.bones["右足首"].position.z()), -1, 0, 0)
+                        right_heel_bone.parent_index = pmx.bones["右つま先"].index
+                        right_heel_bone.index = len(pmx.bones.keys())
+                        pmx.bones[right_heel_bone.name] = right_heel_bone
+                        pmx.bone_indexes[right_heel_bone.index] = right_heel_bone.name
+
+                    if "左足首" in pmx.bones:
+                        left_heel_bone = Bone("左かかと", "", MVector3D(pmx.bones["左足首"].position.x(), 0, pmx.bones["左足首"].position.z()), -1, 0, 0)
+                        left_heel_bone.parent_index = pmx.bones["左つま先"].index
+                        left_heel_bone.index = len(pmx.bones.keys())
+                        pmx.bones[left_heel_bone.name] = left_heel_bone
+                        pmx.bone_indexes[left_heel_bone.index] = left_heel_bone.name
+
+                    if "右つま先" in pmx.bones:
+                        right_big_toe_bone = Bone("右足親指", "", pmx.bones["右つま先"].position + MVector3D(0.5, 0, 0), -1, 0, 0)
+                        right_big_toe_bone.parent_index = pmx.bones["右つま先"].index
+                        right_big_toe_bone.index = len(pmx.bones.keys())
+                        pmx.bones[right_big_toe_bone.name] = right_big_toe_bone
+                        pmx.bone_indexes[right_big_toe_bone.index] = right_big_toe_bone.name
+
+                        right_small_toe_bone = Bone("右足小指", "", pmx.bones["右つま先"].position + MVector3D(-0.5, 0, 0), -1, 0, 0)
+                        right_small_toe_bone.parent_index = pmx.bones["右つま先"].index
+                        right_small_toe_bone.index = len(pmx.bones.keys())
+                        pmx.bones[right_small_toe_bone.name] = right_small_toe_bone
+                        pmx.bone_indexes[right_small_toe_bone.index] = right_small_toe_bone.name
+
+                    if "左つま先" in pmx.bones:
+                        left_big_toe_bone = Bone("左足親指", "", pmx.bones["左つま先"].position + MVector3D(-0.5, 0, 0), -1, 0, 0)
+                        left_big_toe_bone.parent_index = pmx.bones["左つま先"].index
+                        left_big_toe_bone.index = len(pmx.bones.keys())
+                        pmx.bones[left_big_toe_bone.name] = left_big_toe_bone
+                        pmx.bone_indexes[left_big_toe_bone.index] = left_big_toe_bone.name
+
+                        left_small_toe_bone = Bone("左足小指", "", pmx.bones["左つま先"].position + MVector3D(0.5, 0, 0), -1, 0, 0)
+                        left_small_toe_bone.parent_index = pmx.bones["左つま先"].index
+                        left_small_toe_bone.index = len(pmx.bones.keys())
+                        pmx.bones[left_small_toe_bone.name] = left_small_toe_bone
+                        pmx.bone_indexes[left_small_toe_bone.index] = left_small_toe_bone.name
+
                 # 首根元ボーン
                 if "左肩" in pmx.bones and "右肩" in pmx.bones:
                     neck_base_vertex = Vertex(-1, (pmx.bones["左肩"].position + pmx.bones["右肩"].position) / 2, MVector3D(), [], [], Bdef1(-1), -1)
@@ -767,11 +807,11 @@ class PmxReader:
             # 終了命令
             raise ke
         except SizingException as se:
-            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
+            logger.error("PMX読み込み処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
             return se
         except Exception as e:
             import traceback
-            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc())
+            logger.critical("PMX読み込み処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc(), decoration=MLogger.DECORATION_BOX)
             raise e
 
     def hexdigest(self):
