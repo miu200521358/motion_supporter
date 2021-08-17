@@ -7,7 +7,7 @@ cimport numpy as np
 import bezier
 cimport bezier._curve
 
-logger = MLogger(__name__)
+logger = MLogger(__name__, level=MLogger.DEBUG_INFO)
 
 # MMDでの補間曲線の最大値
 INTERPOLATION_MMD_MAX = 127
@@ -155,12 +155,36 @@ cdef tuple c_join_value_2_bezier(int fno, str bone_name, list values, double off
     try:   
         # Xは次数（フレーム数）分移動
         xs = np.arange(0, len(values), dtype=np.float)
+        logger.debug_info("%s: %s, xs: %s", fno, bone_name, xs)
+
         # YはXの移動分を許容範囲とする
         ys = np.array(values, dtype=np.float)
+        logger.debug_info("%s: %s, ys: %s", fno, bone_name, ys)
+
+        s_vals = np.linspace(0, 1, len(values))
+        logger.debug_info("%s: %s, s_vals: %s", fno, bone_name, s_vals)
+
+        representative = bezier.Curve.from_nodes(np.eye(4))
+        logger.debug_info("%s: %s, representative: %s", fno, bone_name, representative)
+
+        transform = representative.evaluate_multi(s_vals).T
+        logger.debug_info("%s: %s, transform: %s", fno, bone_name, transform)
+        
+        # ノードを求める
+        nodes = np.vstack([xs, ys])
+        logger.debug_info("%s: %s, nodes: %s", fno, bone_name, nodes)
+
+        reduced_t, residuals, rank, _ = np.linalg.lstsq(transform, nodes.T, rcond=None)
+        logger.debug_info("%s: %s, reduced_t: %s, residuals: %s, rank: %s", fno, bone_name, reduced_t, residuals, rank)
+
+        reduced = reduced_t.T
+
+        joined_curve = bezier.Curve.from_nodes(reduced)
+        logger.debug_info("%s: %s, joined_curve: %s", fno, bone_name, joined_curve.nodes)
 
         # カトマル曲線をベジェ曲線に変換する
         (bz_x, bz_y) = convert_catmullrom_2_bezier(np.concatenate([[None], xs, [None]]), np.concatenate([[None], ys, [None]]))
-        logger.debug("bz_x: %s, bz_y: %s", list(bz_x), list(bz_y))
+        logger.debug_info("bz_x: %s, bz_y: %s", list(bz_x), list(bz_y))
 
         if len(bz_x) == 0:
             # 始点と終点が指定されていて、カトマル曲線が描けなかった場合、線形補間
@@ -174,63 +198,63 @@ cdef tuple c_join_value_2_bezier(int fno, str bone_name, list values, double off
         # すべての制御点を加味したベジェ曲線
         full_curve = bezier.Curve(np.asfortranarray([bz_x, bz_y]), degree=degree)
 
-        if degree < 3:
-            # 3次未満の場合、3次まで次数を増やす
-            joined_curve = full_curve.elevate()
-            for _ in range(1, 3 - degree):
-                joined_curve = joined_curve.elevate()
-        elif degree == 3:
-            # 3次の場合、そのままベジェ曲線をMMD用に補間
-            joined_curve = full_curve
-        else:
-            # 3次より多い場合、次数を減らす
+        # if degree < 3:
+        #     # 3次未満の場合、3次まで次数を増やす
+        #     joined_curve = full_curve.elevate()
+        #     for _ in range(1, 3 - degree):
+        #         joined_curve = joined_curve.elevate()
+        # elif degree == 3:
+        #     # 3次の場合、そのままベジェ曲線をMMD用に補間
+        #     joined_curve = full_curve
+        # else:
+        #     # 3次より多い場合、次数を減らす
 
-            reduced_curve_list = []
-            bz_x = full_curve.nodes[0]
-            bz_y = full_curve.nodes[1]
-            logger.test("START bz_x: %s, bz_y: %s", bz_x, bz_y)
+        #     reduced_curve_list = []
+        #     bz_x = full_curve.nodes[0]
+        #     bz_y = full_curve.nodes[1]
+        #     logger.test("START bz_x: %s, bz_y: %s", bz_x, bz_y)
             
-            reduced_curve_list = []
-            bz_x = full_curve.nodes[0]
-            bz_y = full_curve.nodes[1]
-            logger.test("START bz_x: %s, bz_y: %s", bz_x, bz_y)
+        #     reduced_curve_list = []
+        #     bz_x = full_curve.nodes[0]
+        #     bz_y = full_curve.nodes[1]
+        #     logger.test("START bz_x: %s, bz_y: %s", bz_x, bz_y)
             
-            # 3次になるまでベジェ曲線を繋いで減らしていく
-            while len(bz_x) > 4:
-                reduced_curve_list = []
+        #     # 3次になるまでベジェ曲線を繋いで減らしていく
+        #     while len(bz_x) > 4:
+        #         reduced_curve_list = []
 
-                for n in range(0, degree + 1, 5):
-                    reduce_bz_x = bz_x[n:n + 5]
-                    reduce_bz_y = bz_y[n:n + 5]
-                    logger.test("n: %s, reduce_bz_x: %s, reduce_bz_y: %s", n, reduce_bz_x, reduce_bz_y)
-                    reduced_curve = bezier.Curve(np.asfortranarray([reduce_bz_x, reduce_bz_y]), degree=(len(reduce_bz_x) - 1))
+        #         for n in range(0, degree + 1, 5):
+        #             reduce_bz_x = bz_x[n:n + 5]
+        #             reduce_bz_y = bz_y[n:n + 5]
+        #             logger.test("n: %s, reduce_bz_x: %s, reduce_bz_y: %s", n, reduce_bz_x, reduce_bz_y)
+        #             reduced_curve = bezier.Curve(np.asfortranarray([reduce_bz_x, reduce_bz_y]), degree=(len(reduce_bz_x) - 1))
 
-                    # 次数がある場合、減らす
-                    if (len(reduce_bz_x) - 1) > 1:
-                        reduced_curve = reduced_curve.reduce_()
+        #             # 次数がある場合、減らす
+        #             if (len(reduce_bz_x) - 1) > 1:
+        #                 reduced_curve = reduced_curve.reduce_()
 
-                    logger.test("n: %s, nodes: %s", n, reduced_curve.nodes)
+        #             logger.test("n: %s, nodes: %s", n, reduced_curve.nodes)
                     
-                    # リストに追加
-                    reduced_curve_list.append(reduced_curve)
+        #             # リストに追加
+        #             reduced_curve_list.append(reduced_curve)
 
-                bz_x = np.empty(0)
-                bz_y = np.empty(0)
+        #         bz_x = np.empty(0)
+        #         bz_y = np.empty(0)
 
-                for reduced_curve in reduced_curve_list:
-                    bz_x = np.append(bz_x, reduced_curve.nodes[0])
-                    bz_y = np.append(bz_y, reduced_curve.nodes[1])
+        #         for reduced_curve in reduced_curve_list:
+        #             bz_x = np.append(bz_x, reduced_curve.nodes[0])
+        #             bz_y = np.append(bz_y, reduced_curve.nodes[1])
 
-                logger.test("NEXT bz_x: %s, bz_y: %s", bz_x, bz_y)
+        #         logger.test("NEXT bz_x: %s, bz_y: %s", bz_x, bz_y)
 
-            logger.test("FINISH bz_x: %s, bz_y: %s", bz_x, bz_y)
+        #     logger.test("FINISH bz_x: %s, bz_y: %s", bz_x, bz_y)
 
-            # bz_x = [full_curve.nodes[0][0]] + list(bz_x) + [full_curve.nodes[0][-1]]
-            # bz_y = [full_curve.nodes[0][0]] + list(bz_y) + [full_curve.nodes[0][-1]]
+        #     # bz_x = [full_curve.nodes[0][0]] + list(bz_x) + [full_curve.nodes[0][-1]]
+        #     # bz_y = [full_curve.nodes[0][0]] + list(bz_y) + [full_curve.nodes[0][-1]]
 
-            joined_curve = bezier.Curve(np.asfortranarray([bz_x, bz_y]), degree=(len(bz_x) - 1))
+        #     joined_curve = bezier.Curve(np.asfortranarray([bz_x, bz_y]), degree=(len(bz_x) - 1))
 
-        logger.debug("joined_curve: %s", joined_curve.nodes)
+        # logger.debug("joined_curve: %s", joined_curve.nodes)
 
         # 全体のキーフレ
         bezier_x = np.arange(0, len(values), dtype=np.float)[1:-1]
@@ -249,21 +273,22 @@ cdef tuple c_join_value_2_bezier(int fno, str bone_name, list values, double off
         # 強制的に合わせる
         fit_bezier_mmd(joined_bz)
 
-        logger.debug("f: %s, %s, values: %s, nodes: %s, joined_bz: %s, %s", fno, bone_name, list(values), joined_curve.nodes, joined_bz[1], joined_bz[2])
+        logger.debug_info("f: %s, %s, values: %s, nodes: %s, joined_bz: %s, %s", fno, bone_name, list(values), joined_curve.nodes, joined_bz[1], joined_bz[2])
 
         # MMD用補間曲線で各xに対応するyを求める
         reduced_ys = np.array([], dtype=np.float)
         for xv in xs[1:-1]:
             x, y, t = evaluate(joined_bz[1].x(), joined_bz[1].y(), joined_bz[2].x(), joined_bz[2].y(), xs[0], xv, xs[-1])
             reduced_ys = np.append(reduced_ys, values[0] + (values[-1] - values[0]) * y)
-        logger.debug("f: %s, %s, reduced_ys: %s", fno, bone_name, list(reduced_ys))
+        logger.debug_info("f: %s, %s, reduced_ys: %s", fno, bone_name, list(reduced_ys))
 
         # 交点の差を取得する(前後は必ず一致)
         diff_ys = np.concatenate([[0], np.array(full_ys) - np.array(reduced_ys)])
-        logger.debug("f: %s, %s, diff_ys: %s", fno, bone_name, list(diff_ys))
+        logger.debug_info("f: %s, %s, diff_ys: %s", fno, bone_name, list(diff_ys))
 
         # 差が大きい箇所をピックアップする
         diff_large = np.where(np.abs(diff_ys) > (diff_limit * (offset + 1)), 1, 0).astype(np.float)
+        logger.debug_info("f: %s, %s, diff_limit: %s, diff_large: %s", fno, bone_name, diff_limit, list(diff_large))
         
         if np.count_nonzero(diff_large) > 0:
             # 差が大きい箇所がある場合、分割不可

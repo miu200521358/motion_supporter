@@ -496,32 +496,21 @@ cdef class VmdMotion:
         cdef OneEuroFilter pxfilter
         cdef OneEuroFilter pyfilter
         cdef OneEuroFilter pzfilter
-        cdef OneEuroFilter rxfilter
-        cdef OneEuroFilter ryfilter
-        cdef OneEuroFilter rzfilter
-        cdef int n
-        cdef list fnos
+        cdef int n, fno
+        cdef list fnos, all_fnos
         cdef prev_sep_fno = 0
-        cdef VmdBoneFrame now_bf
+        cdef VmdBoneFrame now_bf, prev_bf, next_bf, bf
         cdef double px
         cdef double py
         cdef double pz
-        cdef double rx
-        cdef double ry
-        cdef double rz
         cdef MVector3D r
-        cdef MQuaternion new_qq
+        cdef MQuaternion filterd_qq
 
         for n in range(loop):
             # 移動用フィルタ
             pxfilter = OneEuroFilter(**config)
             pyfilter = OneEuroFilter(**config)
             pzfilter = OneEuroFilter(**config)
-
-            # 回転用フィルタ
-            rxfilter = OneEuroFilter(**config)
-            ryfilter = OneEuroFilter(**config)
-            rzfilter = OneEuroFilter(**config)
 
             fnos = self.get_bone_fnos(bone_name)
             prev_sep_fno = 0
@@ -535,33 +524,43 @@ cdef class VmdMotion:
                 fnos = self.get_bone_fnos(bone_name, start_fno=start_fno, end_fno=end_fno)
 
             # 全区間をフィルタにかける
-            for fno in fnos:
-                now_bf = self.c_calc_bf(bone_name, fno, is_key=False, is_read=False, is_reset_interpolation=False)
+            if is_mov:
+                for fno in fnos:
+                    now_bf = self.c_calc_bf(bone_name, fno, is_key=False, is_read=False, is_reset_interpolation=False)
 
-                if is_mov:
                     # 移動XYZそれぞれにフィルターをかける
                     px = pxfilter(now_bf.position.x(), fno)
                     py = pyfilter(now_bf.position.y(), fno)
                     pz = pzfilter(now_bf.position.z(), fno)
                     now_bf.position = MVector3D(px, py, pz)
                 
-                if is_rot:
-                    # 回転XYZそれぞれにフィルターをかける(オイラー角)
-                    r = now_bf.rotation.toEulerAngles()
-                    rx = rxfilter(r.x(), fno)
-                    ry = ryfilter(r.y(), fno)
-                    rz = rzfilter(r.z(), fno)
+                    self.regist_bf(now_bf, bone_name, fno)
 
-                    # クォータニオンに戻して保持
-                    new_qq = MQuaternion.fromEulerAngles(rx, ry, rz)
-                    now_bf.rotation = new_qq
-                
-                self.regist_bf(now_bf, bone_name, fno)
+                    if is_show_log and data_set_no > 0 and fno // 2000 > prev_sep_fno and fnos[-1] > 0:
+                        logger.info("-- %sフレーム目:終了(%s％)【No.%s - 移動フィルタリング - %s(%s)】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name, (n + 1))
+                        prev_sep_fno = fno // 2000
+            
+            if is_rot:
+                prev_sep_fno = 0
+                all_fnos = list(range(fnos[-1] + 1))
 
-                if is_show_log and data_set_no > 0 and fno // 2000 > prev_sep_fno and fnos[-1] > 0:
-                    logger.info("-- %sフレーム目:終了(%s％)【No.%s - フィルタリング - %s(%s)】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name, (n + 1))
-                    prev_sep_fno = fno // 2000
+                for prev_fno, next_fno in zip(all_fnos[n:], all_fnos[2+n:]):
+                    prev_bf = self.c_calc_bf(bone_name, prev_fno, is_key=False, is_read=False, is_reset_interpolation=False)
+                    next_bf = self.c_calc_bf(bone_name, next_fno, is_key=False, is_read=False, is_reset_interpolation=False)
+                    for fno in range(prev_fno + 1, next_fno):
+                        bf = self.c_calc_bf(bone_name, fno, is_key=False, is_read=False, is_reset_interpolation=False)
+                        if bf.key:
+                            # まず前後の中間をそのまま求める
+                            filterd_qq = MQuaternion.slerp(prev_bf.rotation, next_bf.rotation, (fno - prev_fno) / (next_fno - prev_fno))
+                            # 現在の回転にも少し近づける
+                            bf.rotation = MQuaternion.slerp(filterd_qq, bf.rotation, 0.8)
 
+                            self.regist_bf(bf, bone_name, fno)
+
+                    if is_show_log and data_set_no > 0 and prev_fno // 2000 > prev_sep_fno and fnos[-1] > 0:
+                        logger.info("-- %sフレーム目:終了(%s％)【No.%s - 回転フィルタリング - %s(%s)】", prev_fno, round((prev_fno / fnos[-1]) * 100, 3), data_set_no, bone_name, (n + 1))
+                        prev_sep_fno = prev_fno // 2000
+            
     # 無効なキーを物理削除する
     def remove_unkey_bf(self, data_set_no: int, bone_name: str):
         for fno in self.get_bone_fnos(bone_name):
@@ -574,7 +573,7 @@ cdef class VmdMotion:
     # 変曲点を求める
     # https://teratail.com/questions/162391
     def remove_unnecessary_bf(self, data_set_no: int, bone_name: str, is_rot: bint, is_mov: bint, \
-                                     offset=0, rot_diff_limit=0.0001, mov_diff_limit=0.01, start_fno=-1, end_fno=-1, is_show_log=True, is_force=False):
+                                     offset=0, rot_diff_limit=0.001, mov_diff_limit=0.1, start_fno=-1, end_fno=-1, is_show_log=True, is_force=False):
         self.c_remove_unnecessary_bf1(data_set_no, bone_name, is_rot, is_mov, offset, rot_diff_limit, mov_diff_limit, start_fno, end_fno, is_show_log, is_force)
 
     # 指定ボーンの不要キーを削除する
@@ -635,12 +634,12 @@ cdef class VmdMotion:
                 smooth_my_value_dict[fno] = bf.position.y()
                 smooth_mz_value_dict[fno] = bf.position.z()
 
-        cdef dict smooth_rx_dict = self.c_smooth_values(smooth_rx_value_dict, {"freq": 30, "mincutoff": 0.5, "beta": 0.01, "dcutoff": 0.8})
-        cdef dict smooth_ry_dict = self.c_smooth_values(smooth_ry_value_dict, {"freq": 30, "mincutoff": 0.5, "beta": 0.01, "dcutoff": 0.8})
-        cdef dict smooth_rz_dict = self.c_smooth_values(smooth_rz_value_dict, {"freq": 30, "mincutoff": 0.5, "beta": 0.01, "dcutoff": 0.8})
-        cdef dict smooth_mx_dict = self.c_smooth_values(smooth_mx_value_dict, {"freq": 30, "mincutoff": 0.5, "beta": 0.001, "dcutoff": 0.8})
-        cdef dict smooth_my_dict = self.c_smooth_values(smooth_my_value_dict, {"freq": 30, "mincutoff": 0.5, "beta": 0.001, "dcutoff": 0.8})
-        cdef dict smooth_mz_dict = self.c_smooth_values(smooth_mz_value_dict, {"freq": 30, "mincutoff": 0.5, "beta": 0.001, "dcutoff": 0.8})
+        cdef dict smooth_rx_dict = self.c_smooth_values(smooth_rx_value_dict, {"freq": 30, "mincutoff": 0.5, "beta": 0.001, "dcutoff": 0.1})
+        cdef dict smooth_ry_dict = self.c_smooth_values(smooth_ry_value_dict, {"freq": 30, "mincutoff": 0.5, "beta": 0.001, "dcutoff": 0.1})
+        cdef dict smooth_rz_dict = self.c_smooth_values(smooth_rz_value_dict, {"freq": 30, "mincutoff": 0.5, "beta": 0.001, "dcutoff": 0.1})
+        cdef dict smooth_mx_dict = self.c_smooth_values(smooth_mx_value_dict, {"freq": 30, "mincutoff": 0.5, "beta": 0.0001, "dcutoff": 0.1})
+        cdef dict smooth_my_dict = self.c_smooth_values(smooth_my_value_dict, {"freq": 30, "mincutoff": 0.5, "beta": 0.0001, "dcutoff": 0.1})
+        cdef dict smooth_mz_dict = self.c_smooth_values(smooth_mz_value_dict, {"freq": 30, "mincutoff": 0.5, "beta": 0.0001, "dcutoff": 0.1})
 
         # 変化量
         for fidx, fno in enumerate(fnos):
@@ -672,9 +671,9 @@ cdef class VmdMotion:
 
         # 全変化量から変曲点を求める
         if is_rot:
-            rf_prime = np.gradient(list(rot_diff_value_dict.values()))       # 差分近似
-            r_indices = np.where(np.diff(np.sign(rf_prime)))[0]         # 変曲点を求める。
-            r_infections = fnos[r_indices]                              # 変曲点のキーフレを取得する
+            rf_prime = np.gradient(list(rot_diff_value_dict.values()))      # 差分近似
+            r_indices = np.where(np.diff(np.sign(rf_prime)))[0]             # 変曲点を求める。
+            r_infections = fnos[r_indices]                                  # 変曲点のキーフレを取得する
 
         if is_mov:
             mxf_prime = np.gradient(list(mx_diff_value_dict.values()))
@@ -682,11 +681,7 @@ cdef class VmdMotion:
             mx_infections = fnos[mx_indices]
 
             myf_prime = np.gradient(list(my_diff_value_dict.values()))
-            logger.debug("values: %s", list(my_diff_value_dict.values()))
-            logger.debug("myf_prime: %s", list(myf_prime))
-            # my_indices = np.where(np.diff(np.sign(myf_prime)))[0]
-            my_indices = np.where(np.abs(np.diff(np.sign(myf_prime))) > 1)[0]
-            logger.debug("my_indices: %s", list(my_indices))
+            my_indices = np.where(np.diff(np.sign(myf_prime)))[0]
             my_infections = fnos[my_indices]
 
             mzf_prime = np.gradient(list(mz_diff_value_dict.values()))
@@ -696,11 +691,11 @@ cdef class VmdMotion:
         # 各値の変曲点の和集合かつ有効なキーフレのみ対象とする
         cdef list infections = sorted(set(set(r_infections) | set(mx_infections) | set(my_infections) | set(mz_infections) | set([active_fnos[-1]])) & set(active_fnos))
         logger.test("☆%s: start: %s, end: %s, active_fnos: %s", bone_name, fnos[0], fnos[-1], active_fnos)
-        logger.debug("☆%s: start: %s, end: %s, infections: %s", bone_name, fnos[0], fnos[-1], infections)
-        logger.debug("☆%s: start: %s, end: %s, r_infections: %s", bone_name, fnos[0], fnos[-1], list(r_infections))
-        logger.debug("☆%s: start: %s, end: %s, mx_infections: %s", bone_name, fnos[0], fnos[-1], list(mx_infections))
-        logger.debug("☆%s: start: %s, end: %s, my_infections: %s", bone_name, fnos[0], fnos[-1], list(my_infections))
-        logger.debug("☆%s: start: %s, end: %s, mz_infections: %s", bone_name, fnos[0], fnos[-1], list(mz_infections))
+        logger.debug_info("☆%s: start: %s, end: %s, infections: %s", bone_name, fnos[0], fnos[-1], infections)
+        logger.debug_info("☆%s: start: %s, end: %s, r_infections: %s", bone_name, fnos[0], fnos[-1], list(r_infections))
+        logger.debug_info("☆%s: start: %s, end: %s, mx_infections: %s", bone_name, fnos[0], fnos[-1], list(mx_infections))
+        logger.debug_info("☆%s: start: %s, end: %s, my_infections: %s", bone_name, fnos[0], fnos[-1], list(my_infections))
+        logger.debug_info("☆%s: start: %s, end: %s, mz_infections: %s", bone_name, fnos[0], fnos[-1], list(mz_infections))
 
         cdef int iidx, inf_end_fno
         cdef int inf_start_fno = active_fnos[0]
@@ -709,7 +704,7 @@ cdef class VmdMotion:
         cdef list my_values = []
         cdef list mz_values = []
         cdef list inf_fnos = []
-
+        
         for iidx, inf_end_fno in enumerate(infections):
             rot_values = []
             mx_values = []
@@ -729,13 +724,13 @@ cdef class VmdMotion:
             next_bf = None
 
             # 単調増加としてキーを結合してみる
-            (joined_rot_bzs, rot_inflection) = MBezierUtils.join_value_2_bezier(inf_end_fno, bone_name, rot_values, \
+            (joined_rot_bzs, rot_inflection) = MBezierUtils.join_value_2_bezier(inf_end_fno, f'{bone_name}R', rot_values, \
                                                                                 offset=offset, diff_limit=rot_diff_limit) if is_rot else (True, [])
-            (joined_mx_bzs, mx_inflection) = MBezierUtils.join_value_2_bezier(inf_end_fno, bone_name, mx_values, \
+            (joined_mx_bzs, mx_inflection) = MBezierUtils.join_value_2_bezier(inf_end_fno, f'{bone_name}MX', mx_values, \
                                                                                 offset=offset, diff_limit=mov_diff_limit) if is_mov else (True, [])
-            (joined_my_bzs, my_inflection) = MBezierUtils.join_value_2_bezier(inf_end_fno, bone_name, my_values, \
+            (joined_my_bzs, my_inflection) = MBezierUtils.join_value_2_bezier(inf_end_fno, f'{bone_name}MY', my_values, \
                                                                                 offset=offset, diff_limit=mov_diff_limit) if is_mov else (True, [])
-            (joined_mz_bzs, mz_inflection) = MBezierUtils.join_value_2_bezier(inf_end_fno, bone_name, mz_values, \
+            (joined_mz_bzs, mz_inflection) = MBezierUtils.join_value_2_bezier(inf_end_fno, f'{bone_name}MZ', mz_values, \
                                                                                 offset=offset, diff_limit=mov_diff_limit) if is_mov else (True, [])
 
             if joined_rot_bzs and joined_mx_bzs and joined_my_bzs and joined_mz_bzs:
@@ -743,13 +738,13 @@ cdef class VmdMotion:
 
                 # 結合できた場合、補間曲線をnextに設定
                 if is_rot and len(joined_rot_bzs) > 0:
-                    logger.debug("☆%s: f: %s(%s), キー:回転補間曲線成功: 1: %s, 2: %s", bone_name, inf_start_fno, inf_end_fno, joined_rot_bzs[1].to_log(), joined_rot_bzs[2].to_log())
+                    logger.debug_info("☆%s: f: %s(%s), キー:回転補間曲線成功: 1: %s, 2: %s", bone_name, inf_start_fno, inf_end_fno, joined_rot_bzs[1].to_log(), joined_rot_bzs[2].to_log())
                     self.reset_interpolation_parts(bone_name, next_bf, joined_rot_bzs, MBezierUtils.R_x1_idxs, MBezierUtils.R_y1_idxs, MBezierUtils.R_x2_idxs, MBezierUtils.R_y2_idxs)
                 
                 if is_mov and len(joined_mx_bzs) > 0 and len(joined_my_bzs) > 0 and len(joined_mz_bzs) > 0:
-                    logger.test("☆%s: f: %s(%s), キー:移動X補間曲線成功: 1: %s, 2: %s", bone_name, inf_start_fno, inf_end_fno, joined_mx_bzs[1].to_log(), joined_mx_bzs[2].to_log())
-                    logger.debug("☆%s: f: %s(%s), キー:移動Y補間曲線成功: 1: %s, 2: %s", bone_name, inf_start_fno, inf_end_fno, joined_my_bzs[1].to_log(), joined_my_bzs[2].to_log())
-                    logger.test("☆%s: f: %s(%s), キー:移動Z補間曲線成功: 1: %s, 2: %s", bone_name, inf_start_fno, inf_end_fno, joined_mz_bzs[1].to_log(), joined_mz_bzs[2].to_log())
+                    logger.debug_info("☆%s: f: %s(%s), キー:移動X補間曲線成功: 1: %s, 2: %s", bone_name, inf_start_fno, inf_end_fno, joined_mx_bzs[1].to_log(), joined_mx_bzs[2].to_log())
+                    logger.debug_info("☆%s: f: %s(%s), キー:移動Y補間曲線成功: 1: %s, 2: %s", bone_name, inf_start_fno, inf_end_fno, joined_my_bzs[1].to_log(), joined_my_bzs[2].to_log())
+                    logger.debug_info("☆%s: f: %s(%s), キー:移動Z補間曲線成功: 1: %s, 2: %s", bone_name, inf_start_fno, inf_end_fno, joined_mz_bzs[1].to_log(), joined_mz_bzs[2].to_log())
                     self.reset_interpolation_parts(bone_name, next_bf, joined_mx_bzs, MBezierUtils.MX_x1_idxs, MBezierUtils.MX_y1_idxs, MBezierUtils.MX_x2_idxs, MBezierUtils.MX_y2_idxs)
                     self.reset_interpolation_parts(bone_name, next_bf, joined_my_bzs, MBezierUtils.MY_x1_idxs, MBezierUtils.MY_y1_idxs, MBezierUtils.MY_x2_idxs, MBezierUtils.MY_y2_idxs)
                     self.reset_interpolation_parts(bone_name, next_bf, joined_mz_bzs, MBezierUtils.MZ_x1_idxs, MBezierUtils.MZ_y1_idxs, MBezierUtils.MZ_x2_idxs, MBezierUtils.MZ_y2_idxs)
@@ -758,19 +753,19 @@ cdef class VmdMotion:
                 if bone_name in self.bones and inf_end_fno in self.bones[bone_name]:
                     self.bones[bone_name][inf_end_fno].key = True
                     self.bones[bone_name][inf_end_fno].interpolation = next_bf.interpolation
-                    logger.test("◇登録 %s: f: %s, next_bf(%s) rot:%s", bone_name, inf_end_fno, next_bf.fno, next_bf.rotation.toEulerAngles4MMD().to_log())
+                    logger.debug_info("◇登録 %s: f: %s, next_bf(%s) rot:%s", bone_name, inf_end_fno, next_bf.fno, next_bf.rotation.toEulerAngles4MMD().to_log())
                 else:
                     self.c_regist_bf(next_bf, bone_name, inf_end_fno, copy_interpolation=True)
-                    logger.test("☆登録 %s: f: %s, next_bf(%s) rot:%s", bone_name, inf_end_fno, next_bf.fno, next_bf.rotation.toEulerAngles4MMD().to_log())
+                    logger.debug_info("☆登録 %s: f: %s, next_bf(%s) rot:%s", bone_name, inf_end_fno, next_bf.fno, next_bf.rotation.toEulerAngles4MMD().to_log())
                 
                 for f in range(inf_start_fno + 1, inf_end_fno):
                     # 結合できた場合、区間内を削除
                     if f in self.bones[bone_name]:
-                        logger.test("☆%s: f: %s, キーフレ削除: df: %s", bone_name, inf_end_fno, f)
+                        logger.debug_info("☆%s: f: %s, キーフレ削除: df: %s", bone_name, inf_end_fno, f)
                         self.bones[bone_name][f].key = False
             else:
                 # 結合できなかった場合、開始を現在の変曲点に移す
-                logger.debug("★%s: f: %s(%s), キー:補間曲線失敗: rot_inflection: %s, mx_inflection: %s, my_inflection: %s, mz_inflection: %s", \
+                logger.debug_info("★%s: f: %s(%s), キー:補間曲線失敗: rot_inflection: %s, mx_inflection: %s, my_inflection: %s, mz_inflection: %s", \
                                 bone_name, inf_start_fno, inf_end_fno, rot_inflection, mx_inflection, my_inflection, mz_inflection)
                 
                 keyed_fnos = self.get_bone_fnos(bone_name, start_fno=inf_start_fno, end_fno=inf_end_fno, is_key=True)
@@ -779,7 +774,7 @@ cdef class VmdMotion:
                     if len(inf_fnos) <= 2:
                         break
                     
-                    logger.debug(f"【不要キー削除(細分化処理) - {bone_name}({cidx+1})】")
+                    logger.debug_info(f"【不要キー削除(細分化処理) - {bone_name}({cidx+1})】")
 
                     activate_fnos = self.c_remove_unnecessary_bf2(cidx, data_set_no, bone_name, keyed_fnos, rot_diff_value_dict, mx_diff_value_dict, my_diff_value_dict, mz_diff_value_dict, \
                                                                   is_rot, is_mov, offset, rot_diff_limit, mov_diff_limit, is_show_log, is_force)
@@ -866,13 +861,13 @@ cdef class VmdMotion:
             
             if fno in active_fnos:
                 # 単調増加としてキーを結合してみる
-                (joined_rot_bzs, rot_inflection) = MBezierUtils.join_value_2_bezier(fno, bone_name, rot_values, \
+                (joined_rot_bzs, rot_inflection) = MBezierUtils.join_value_2_bezier(fno, f'{bone_name}R', rot_values, \
                                                                                     offset=offset, diff_limit=rot_diff_limit) if is_rot else (True, [])
-                (joined_mx_bzs, mx_inflection) = MBezierUtils.join_value_2_bezier(fno, bone_name, mx_values, \
+                (joined_mx_bzs, mx_inflection) = MBezierUtils.join_value_2_bezier(fno, f'{bone_name}MX', mx_values, \
                                                                                     offset=offset, diff_limit=mov_diff_limit) if is_mov else (True, [])
-                (joined_my_bzs, my_inflection) = MBezierUtils.join_value_2_bezier(fno, bone_name, my_values, \
+                (joined_my_bzs, my_inflection) = MBezierUtils.join_value_2_bezier(fno, f'{bone_name}MY', my_values, \
                                                                                     offset=offset, diff_limit=mov_diff_limit) if is_mov else (True, [])
-                (joined_mz_bzs, mz_inflection) = MBezierUtils.join_value_2_bezier(fno, bone_name, mz_values, \
+                (joined_mz_bzs, mz_inflection) = MBezierUtils.join_value_2_bezier(fno, f'{bone_name}MZ', mz_values, \
                                                                                     offset=offset, diff_limit=mov_diff_limit) if is_mov else (True, [])
 
                 if joined_rot_bzs and joined_mx_bzs and joined_my_bzs and joined_mz_bzs:
@@ -1545,6 +1540,9 @@ cdef class VmdMotion:
     # 有効なキーフレが入っているか
     cpdef bint is_active_bones(self, str bone_name):
         cdef VmdBoneFrame bf
+        if bone_name not in self.bones:
+            return False
+            
         for bf in self.bones[bone_name].values():
             if bf.position != MVector3D():
                 return True

@@ -9,6 +9,7 @@ from form.panel.NoisePanel import NoisePanel
 from form.panel.MultiSplitPanel import MultiSplitPanel
 from form.panel.MultiJoinPanel import MultiJoinPanel
 from form.panel.ArmIKtoFKPanel import ArmIKtoFKPanel
+from form.panel.ArmTwistOffPanel import ArmTwistOffPanel
 from form.panel.LegFKtoIKPanel import LegFKtoIKPanel
 from form.panel.BlendPanel import BlendPanel
 from form.panel.BezierPanel import BezierPanel
@@ -76,40 +77,44 @@ class MainFrame(wx.Frame):
         # ---------------------------------------------
 
         # 全親タブ
-        self.parent_panel_ctrl = ParentPanel(self, self.note_ctrl, 9)
+        self.parent_panel_ctrl = ParentPanel(self, self.note_ctrl, 1)
         self.note_ctrl.AddPage(self.parent_panel_ctrl, u"全親移植", False)
         
         # ゆらぎタブ
-        self.noise_panel_ctrl = NoisePanel(self, self.note_ctrl, 9)
+        self.noise_panel_ctrl = NoisePanel(self, self.note_ctrl, 2)
         self.note_ctrl.AddPage(self.noise_panel_ctrl, u"ゆらぎ複製", False)
         
         # 多段分割タブ
-        self.multi_split_panel_ctrl = MultiSplitPanel(self, self.note_ctrl, 9)
+        self.multi_split_panel_ctrl = MultiSplitPanel(self, self.note_ctrl, 3)
         self.note_ctrl.AddPage(self.multi_split_panel_ctrl, u"多段分割", False)
         
         # 多段統合タブ
-        self.multi_join_panel_ctrl = MultiJoinPanel(self, self.note_ctrl, 9)
+        self.multi_join_panel_ctrl = MultiJoinPanel(self, self.note_ctrl, 4)
         self.note_ctrl.AddPage(self.multi_join_panel_ctrl, u"多段統合", False)
         
         # 足FK2FKタブ
-        self.leg_fk2ik_panel_ctrl = LegFKtoIKPanel(self, self.note_ctrl, 9)
+        self.leg_fk2ik_panel_ctrl = LegFKtoIKPanel(self, self.note_ctrl, 5)
         self.note_ctrl.AddPage(self.leg_fk2ik_panel_ctrl, u"足FKtoIK", False)
 
+        # 腕IKtoFKタブ
+        self.arm_ik2fk_panel_ctrl = ArmIKtoFKPanel(self, self.note_ctrl, 6)
+        self.note_ctrl.AddPage(self.arm_ik2fk_panel_ctrl, u"腕IKtoFK", False)
+        
         # スムーズタブ
-        self.smooth_panel_ctrl = SmoothPanel(self, self.note_ctrl, 5)
+        self.smooth_panel_ctrl = SmoothPanel(self, self.note_ctrl, 7)
         self.note_ctrl.AddPage(self.smooth_panel_ctrl, u"スムーズ", False)
 
         # ブレンドタブ
-        self.blend_panel_ctrl = BlendPanel(self, self.note_ctrl, 6)
+        self.blend_panel_ctrl = BlendPanel(self, self.note_ctrl, 8)
         self.note_ctrl.AddPage(self.blend_panel_ctrl, u"ブレンド", False)
 
         # 補間タブ
         self.bezier_panel_ctrl = BezierPanel(self, self.note_ctrl, 9)
         self.note_ctrl.AddPage(self.bezier_panel_ctrl, u"補間", False)
                 
-        # # 腕IKtoFKタブ
-        # self.arm_ik2fk_panel_ctrl = ArmIKtoFKPanel(self, self.note_ctrl, 9)
-        # self.note_ctrl.AddPage(self.arm_ik2fk_panel_ctrl, u"腕IKtoFK", False)
+        # # 捩りOFFタブ
+        # self.arm_twist_off_panel_ctrl = ArmTwistOffPanel(self, self.note_ctrl, 9)
+        # self.note_ctrl.AddPage(self.arm_twist_off_panel_ctrl, u"捩りOFF", False)
         
         # ---------------------------------------------
 

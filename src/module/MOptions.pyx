@@ -89,6 +89,23 @@ cdef class MNoiseOptions:
 
 cdef class MArmIKtoFKOptions:
 
+    def __init__(self, str version_name, int logging_level, int max_workers, VmdMotion motion, PmxModel ik_model, PmxModel fk_model, str output_path, \
+                 bint remove_unnecessary_flg, object monitor, bint is_file, str outout_datetime):
+        self.version_name = version_name
+        self.logging_level = logging_level
+        self.motion = motion
+        self.ik_model = ik_model
+        self.fk_model = fk_model
+        self.output_path = output_path
+        self.remove_unnecessary_flg = remove_unnecessary_flg
+        self.monitor = monitor
+        self.is_file = is_file
+        self.outout_datetime = outout_datetime
+        self.max_workers = max_workers
+
+
+cdef class MArmTwistOffOptions:
+
     def __init__(self, str version_name, int logging_level, int max_workers, VmdMotion motion, PmxModel model, str output_path, \
                  bint remove_unnecessary_flg, object monitor, bint is_file, str outout_datetime):
         self.version_name = version_name
@@ -139,12 +156,15 @@ cdef class MMultiJoinOptions:
 
 cdef class MLegFKtoIKOptions:
 
-    def __init__(self, str version_name, int logging_level, int max_workers, VmdMotion motion, PmxModel model, str output_path, \
-                 bint remove_unnecessary_flg, object monitor, bint is_file, str outout_datetime):
+    def __init__(self, str version_name, int logging_level, int max_workers, VmdMotion motion, PmxModel model, list target_legs, bint ground_leg_flg, \
+                 bint ankle_horizonal_flg, str output_path, bint remove_unnecessary_flg, object monitor, bint is_file, str outout_datetime):
         self.version_name = version_name
         self.logging_level = logging_level
         self.motion = motion
         self.model = model
+        self.target_legs = target_legs
+        self.ground_leg_flg = ground_leg_flg
+        self.ankle_horizonal_flg = ankle_horizonal_flg
         self.output_path = output_path
         self.remove_unnecessary_flg = remove_unnecessary_flg
         self.monitor = monitor

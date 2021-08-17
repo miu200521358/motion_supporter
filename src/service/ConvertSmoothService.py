@@ -70,7 +70,7 @@ class ConvertSmoothService():
         with ThreadPoolExecutor(thread_name_prefix="prepare", max_workers=self.options.max_workers) as executor:
             for bone_name in self.options.motion.bones.keys():
                 if bone_name in self.options.model.bones and bone_name in self.options.bone_list and bone_name not in ["両目"]:
-                # if bone_name in self.options.model.bones and bone_name in self.options.bone_list:
+                    # if bone_name in self.options.model.bones and bone_name in self.options.bone_list:
                     if self.options.interpolation == 0 and len(self.options.motion.bones[bone_name].keys()) >= 2:
                         # 線形補間の場合、そのまま全打ち
                         futures.append(executor.submit(self.prepare_linear, bone_name))
@@ -126,7 +126,7 @@ class ConvertSmoothService():
             with ThreadPoolExecutor(thread_name_prefix="remove", max_workers=self.options.max_workers) as executor:
                 for bone_name in self.options.motion.bones.keys():
                     if bone_name in self.options.model.bones and bone_name in self.options.bone_list and bone_name not in ["両目"]:
-                    # if bone_name in self.options.model.bones and bone_name in self.options.bone_list:
+                        # if bone_name in self.options.model.bones and bone_name in self.options.bone_list:
                         futures.append(executor.submit(self.remove_filterd_bf, bone_name))
                 for morph_name in self.options.motion.morphs.keys():
                     if morph_name in self.options.model.morphs and morph_name in self.options.bone_list:
@@ -157,10 +157,10 @@ class ConvertSmoothService():
 
             return True
         except SizingException as se:
-            logger.error("スムージング処理が処理できないデータで終了しました。\n\n%s", se.message)
+            logger.error("スムージング処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
             return False
         except Exception as e:
-            logger.error("スムージング処理が意図せぬエラーで終了しました。", e)
+            logger.critical("スムージング処理が意図せぬエラーで終了しました。", e, decoration=MLogger.DECORATION_BOX)
             return False
     
     # 不要キー削除処理
@@ -172,30 +172,30 @@ class ConvertSmoothService():
                 logger.info("【フィルタリング1回目】%s 開始", bone_name)
                 self.options.motion.smooth_filter_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
                                                      self.options.model.bones[bone_name].getTranslatable(), \
-                                                     config={"freq": 30, "mincutoff": 0.3, "beta": 0.00000000001, "dcutoff": 0.8})
+                                                     config={"freq": 30, "mincutoff": 0.3, "beta": 0.1, "dcutoff": 0.8})
                 logger.info("【フィルタリング1回目】%s 終了", bone_name)
 
             for n in range(1, self.options.loop_cnt):
                 # 処理回数が3回以上の場合、フィルタをかける
-                # if self.options.loop_cnt > 3 and n > 3:
-                #     logger.info("【フィルタリング%s回目】%s 開始", n - 2, bone_name)
-                #     self.options.motion.smooth_filter_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
-                #                                          self.options.model.bones[bone_name].getTranslatable(), \
-                #                                          config={"freq": 30, "mincutoff": 0.3, "beta": 0.001, "dcutoff": 0.8})
-                #     logger.info("【フィルタリング%s回目】%s 終了", n - 2, bone_name)
+                if self.options.loop_cnt > 3 and n > 3:
+                    logger.info("【フィルタリング%s回目】%s 開始", n - 2, bone_name)
+                    self.options.motion.smooth_filter_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
+                                                         self.options.model.bones[bone_name].getTranslatable(), \
+                                                         config={"freq": 30, "mincutoff": 0.3, "beta": 0.1, "dcutoff": 0.8})
+                    logger.info("【フィルタリング%s回目】%s 終了", n - 2, bone_name)
 
                 logger.info("【不要キー削除%s回目】%s 開始", n, bone_name)
                 self.options.motion.remove_unnecessary_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
                                                           self.options.model.bones[bone_name].getTranslatable(), offset=0, \
-                                                          rot_diff_limit=0.007, mov_diff_limit=0.05)
+                                                          rot_diff_limit=(0.01 if n > 2 else 0.005), mov_diff_limit=(0.05 if n > 2 else 0.01))
                 logger.info("【不要キー削除%s回目】%s 終了", n, bone_name)
 
             return True
         except SizingException as se:
-            logger.error("スムージング処理が処理できないデータで終了しました。\n\n%s", se.message)
+            logger.error("スムージング処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
             return False
         except Exception as e:
-            logger.error("スムージング処理が意図せぬエラーで終了しました。", e)
+            logger.critical("スムージング処理が意図せぬエラーで終了しました。", e, decoration=MLogger.DECORATION_BOX)
             return False
     
     # 線形補間で全打ち
@@ -215,10 +215,10 @@ class ConvertSmoothService():
 
             return True
         except SizingException as se:
-            logger.error("スムージング処理が処理できないデータで終了しました。\n\n%s", se.message)
+            logger.error("スムージング処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
             return False
         except Exception as e:
-            logger.error("スムージング処理が意図せぬエラーで終了しました。", e)
+            logger.critical("スムージング処理が意図せぬエラーで終了しました。", e, decoration=MLogger.DECORATION_BOX)
             return False
         
     # 曲線補間で全打ち
@@ -257,10 +257,10 @@ class ConvertSmoothService():
 
             return True
         except SizingException as se:
-            logger.error("スムージング処理が処理できないデータで終了しました。\n\n%s", se.message)
+            logger.error("スムージング処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
             return False
         except Exception as e:
-            logger.error("スムージング処理が意図せぬエラーで終了しました。", e)
+            logger.critical("スムージング処理が意図せぬエラーで終了しました。", e, decoration=MLogger.DECORATION_BOX)
             return False
         
     # 曲線補間で全打ち
@@ -343,10 +343,10 @@ class ConvertSmoothService():
 
             return True
         except SizingException as se:
-            logger.error("スムージング処理が処理できないデータで終了しました。\n\n%s", se.message)
+            logger.error("スムージング処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
             return False
         except Exception as e:
-            logger.error("スムージング処理が意図せぬエラーで終了しました。", e)
+            logger.critical("スムージング処理が意図せぬエラーで終了しました。", e, decoration=MLogger.DECORATION_BOX)
             return False
 
     # 円形補間で全打ち
@@ -399,10 +399,10 @@ class ConvertSmoothService():
 
             return True
         except SizingException as se:
-            logger.error("スムージング処理が処理できないデータで終了しました。\n\n%s", se.message)
+            logger.error("スムージング処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
             return False
         except Exception as e:
-            logger.error("スムージング処理が意図せぬエラーで終了しました。", e)
+            logger.critical("スムージング処理が意図せぬエラーで終了しました。", e, decoration=MLogger.DECORATION_BOX)
             return False
 
     # 移動の円形補間

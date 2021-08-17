@@ -35,7 +35,7 @@ class ConvertMultiJoinService():
             service_data_txt = "{service_data_txt}　不要キー削除: {center_rotation}\n".format(service_data_txt=service_data_txt,
                                     center_rotation=self.options.remove_unnecessary_flg) # noqa
 
-            selections = ["{0} ← 回転(1): {1}, 回転(2): {2}, 回転(3): {3}, 移動(1): {4}, 移動(2): {5}, 移動(3): {6}" \
+            selections = ["{0} ← 回転(X): {1}, 回転(Y): {2}, 回転(Z): {3}, 移動(X): {4}, 移動(Y): {5}, 移動(Z): {6}" \
                           .format(bset[0], bset[1], bset[2], bset[3], bset[4], bset[5], bset[6]) for bset in self.options.target_bones]
             service_data_txt = "{service_data_txt}　対象ボーン: {target_bones}\n".format(service_data_txt=service_data_txt,
                                     target_bones='\n'.join(selections)) # noqa

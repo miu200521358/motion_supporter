@@ -91,27 +91,27 @@ class TargetBoneDialog(wx.Dialog):
         self.name_arrow_txt.Wrap(-1)
         self.grid_sizer.Add(self.name_arrow_txt, 0, wx.CENTER | wx.ALL, 5)
 
-        self.rotate_x_txt = wx.StaticText(self.window, wx.ID_ANY, "回転(1)", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.rotate_x_txt = wx.StaticText(self.window, wx.ID_ANY, "回転(X)", wx.DefaultPosition, wx.DefaultSize, 0)
         self.rotate_x_txt.Wrap(-1)
         self.grid_sizer.Add(self.rotate_x_txt, 0, wx.ALL, 5)
 
-        self.rotate_y_txt = wx.StaticText(self.window, wx.ID_ANY, "回転(2)", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.rotate_y_txt = wx.StaticText(self.window, wx.ID_ANY, "回転(Y)", wx.DefaultPosition, wx.DefaultSize, 0)
         self.rotate_y_txt.Wrap(-1)
         self.grid_sizer.Add(self.rotate_y_txt, 0, wx.ALL, 5)
 
-        self.rotate_z_txt = wx.StaticText(self.window, wx.ID_ANY, "回転(3)", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.rotate_z_txt = wx.StaticText(self.window, wx.ID_ANY, "回転(Z)", wx.DefaultPosition, wx.DefaultSize, 0)
         self.rotate_z_txt.Wrap(-1)
         self.grid_sizer.Add(self.rotate_z_txt, 0, wx.ALL, 5)
 
-        self.move_x_txt = wx.StaticText(self.window, wx.ID_ANY, "移動(1)", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.move_x_txt = wx.StaticText(self.window, wx.ID_ANY, "移動(X)", wx.DefaultPosition, wx.DefaultSize, 0)
         self.move_x_txt.Wrap(-1)
         self.grid_sizer.Add(self.move_x_txt, 0, wx.ALL, 5)
 
-        self.move_y_txt = wx.StaticText(self.window, wx.ID_ANY, "移動(2)", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.move_y_txt = wx.StaticText(self.window, wx.ID_ANY, "移動(Y)", wx.DefaultPosition, wx.DefaultSize, 0)
         self.move_y_txt.Wrap(-1)
         self.grid_sizer.Add(self.move_y_txt, 0, wx.ALL, 5)
 
-        self.move_z_txt = wx.StaticText(self.window, wx.ID_ANY, "移動(3)", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.move_z_txt = wx.StaticText(self.window, wx.ID_ANY, "移動(Z)", wx.DefaultPosition, wx.DefaultSize, 0)
         self.move_z_txt.Wrap(-1)
         self.grid_sizer.Add(self.move_z_txt, 0, wx.ALL, 5)
 

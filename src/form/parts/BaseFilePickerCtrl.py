@@ -323,9 +323,9 @@ class BaseFilePickerCtrl():
         except MKilledException:
             logger.warning("読み込み処理を中断します。", decoration=MLogger.DECORATION_BOX)
         except SizingException as se:
-            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
+            logger.error("読み込みが処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
         except Exception as e:
-            logger.critical("サイジング処理が意図せぬエラーで終了しました。", e, decoration=MLogger.DECORATION_BOX)
+            logger.critical("読み込み処理が意図せぬエラーで終了しました。", e, decoration=MLogger.DECORATION_BOX)
         finally:
             logging.shutdown()
 

@@ -81,6 +81,21 @@ cdef class MArmIKtoFKOptions:
     cdef public str version_name
     cdef public int logging_level
     cdef public VmdMotion motion
+    cdef public PmxModel ik_model
+    cdef public PmxModel fk_model
+    cdef public list target_bones
+    cdef public str output_path
+    cdef public bint remove_unnecessary_flg
+    cdef public object monitor
+    cdef public bint is_file
+    cdef public str outout_datetime
+    cdef public int max_workers
+
+
+cdef class MArmTwistOffOptions:
+    cdef public str version_name
+    cdef public int logging_level
+    cdef public VmdMotion motion
     cdef public PmxModel model
     cdef public list target_bones
     cdef public str output_path
@@ -124,6 +139,9 @@ cdef class MLegFKtoIKOptions:
     cdef public int logging_level
     cdef public VmdMotion motion
     cdef public PmxModel model
+    cdef public list target_legs
+    cdef public bint ground_leg_flg
+    cdef public bint ankle_horizonal_flg
     cdef public str output_path
     cdef public bint remove_unnecessary_flg
     cdef public object monitor
