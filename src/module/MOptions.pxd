@@ -139,9 +139,9 @@ cdef class MLegFKtoIKOptions:
     cdef public int logging_level
     cdef public VmdMotion motion
     cdef public PmxModel model
-    cdef public list target_legs
     cdef public bint ground_leg_flg
     cdef public bint ankle_horizonal_flg
+    cdef public float leg_error_tolerance
     cdef public str output_path
     cdef public bint remove_unnecessary_flg
     cdef public object monitor
