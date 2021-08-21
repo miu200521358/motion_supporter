@@ -140,9 +140,8 @@ class ConvertLegFKtoIKService():
         for fidx, fno in enumerate(fnos):
             # Y位置を調整する
             center_y_bf = motion.calc_bf(center_y_bone_name, fno)
-            if center_y_bf.position.y() > median_leg_y:
-                center_y_bf.position.setY(center_y_bf.position.y() - median_leg_y)
-                motion.regist_bf(center_y_bf, center_y_bone_name, fno)
+            center_y_bf.position.setY(center_y_bf.position.y() - median_leg_y)
+            motion.regist_bf(center_y_bf, center_y_bone_name, fno)
 
             if fno // 500 > prev_sep_fno:
                 logger.count("【足ＩＫ接地】", fno, fnos)
