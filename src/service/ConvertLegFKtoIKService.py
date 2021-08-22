@@ -33,28 +33,25 @@ class ConvertLegFKtoIKService():
                                     vmd=os.path.basename(self.options.motion.path)) # noqa
             service_data_txt = "{service_data_txt}　モデル: {model}({model_name})\n".format(service_data_txt=service_data_txt,
                                     model=os.path.basename(self.options.motion.path), model_name=self.options.model.name) # noqa
-            service_data_txt = "{service_data_txt}　足首水平化: {target_legs}\n".format(service_data_txt=service_data_txt,
-                                    target_legs=self.options.ankle_horizonal_flg) # noqa
-            service_data_txt = "{service_data_txt}　かかと・つま先Y=0: {target_legs}\n".format(service_data_txt=service_data_txt,
-                                    target_legs=self.options.ground_leg_flg) # noqa
-            if len(self.options.target_legs) > 0:
-                service_data_txt = "{service_data_txt}　接地固定設定: {target_legs}\n".format(service_data_txt=service_data_txt,
-                                        target_legs=(len(self.options.target_legs) > 0)) # noqa
+            service_data_txt = "{service_data_txt}　足首水平化: {ankle_horizonal_flg}\n".format(service_data_txt=service_data_txt,
+                                    ankle_horizonal_flg=self.options.ankle_horizonal_flg) # noqa
+            service_data_txt = "{service_data_txt}　かかと・つま先Y=0: {ground_leg_flg}\n".format(service_data_txt=service_data_txt,
+                                    ground_leg_flg=self.options.ground_leg_flg) # noqa
+            service_data_txt = "{service_data_txt}　足IKブレ固定: {leg_error_tolerance}\n".format(service_data_txt=service_data_txt,
+                                    leg_error_tolerance=self.options.leg_error_tolerance) # noqa
             service_data_txt = "{service_data_txt}　不要キー削除: {center_rotation}\n".format(service_data_txt=service_data_txt,
                                     center_rotation=self.options.remove_unnecessary_flg) # noqa
 
             logger.info(service_data_txt, decoration=MLogger.DECORATION_BOX)
 
-            # 足首水平設定がある場合、足首水平化
-            if self.options.ankle_horizonal_flg:
-                self.prepare_ankle_horizonal()
+            # # 足首水平設定がある場合、足首水平化
+            # if self.options.ankle_horizonal_flg:
+            #     self.prepare_ankle_horizonal()
 
             # 接地設定がある場合、接地設定
             if self.options.ground_leg_flg:
                 self.prepare_ground()
-            elif len(self.options.target_legs) > 0:
-                self.prepare_ground2()
-            
+
             futures = []
 
             with ThreadPoolExecutor(thread_name_prefix="leffk", max_workers=self.options.max_workers) as executor:
@@ -81,73 +78,7 @@ class ConvertLegFKtoIKService():
             logger.critical("足ＩＫ変換処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc(), decoration=MLogger.DECORATION_BOX)
         finally:
             logging.shutdown()
-    
-    # 足首の水平化
-    def prepare_ankle_horizonal(self):
-        logger.info("足首水平化", decoration=MLogger.DECORATION_LINE)
 
-        motion = self.options.motion
-        model = self.options.model
-
-        # 足首角度
-        for direction in ["右", "左"]:
-            prev_sep_fno = 0
-
-            # 足FK末端までのリンク
-            # toe_fk_links = model.create_link_2_top_one(f"{direction}つま先実体", is_defined=False)
-            ankle_fk_links = model.create_link_2_top_one(f"{direction}足首", is_defined=False)
-            
-            # 足首から先を固定で付与する
-            if f"{direction}足底実体" in model.bones:
-                ankle_fk_links.append(model.bones[f"{direction}足底実体"])
-            if f"{direction}足先EX" in model.bones:
-                ankle_fk_links.append(model.bones[f"{direction}足先EX"])
-            if f"{direction}つま先実体" in model.bones:
-                ankle_fk_links.append(model.bones[f"{direction}つま先実体"])
-
-            big_toe_links = model.create_link_2_top_one(f'{direction}足親指', is_defined=False)
-            small_toe_links = model.create_link_2_top_one(f'{direction}足小指', is_defined=False)
-            heel_links = model.create_link_2_top_one(f'{direction}かかと', is_defined=False)
-
-            _, big_toe_mats = MServiceUtils.calc_global_pos(model, big_toe_links, VmdMotion(), 0, return_matrix=True)
-            _, small_toe_mats = MServiceUtils.calc_global_pos(model, small_toe_links, VmdMotion(), 0, return_matrix=True)
-
-            # 指定範囲内の足首キーフレを取得
-            fnos = motion.get_bone_fnos(f"{direction}足首")
-
-            for fidx, fno in enumerate(fnos):
-                ankle_bf = motion.calc_bf(f"{direction}足首", fno)
-
-                big_toe_3ds = MServiceUtils.calc_global_pos(model, big_toe_links, motion, fno)
-                small_toe_3ds = MServiceUtils.calc_global_pos(model, small_toe_links, motion, fno)
-                _, heel_mats = MServiceUtils.calc_global_pos(model, heel_links, motion, fno, return_matrix=True)
-
-                now_big_toe_relative_vec = heel_mats[heel_links.last_name()].inverted() * big_toe_3ds[big_toe_links.last_name()]
-                now_small_toe_relative_vec = heel_mats[heel_links.last_name()].inverted() * small_toe_3ds[small_toe_links.last_name()]
-
-                now_big_slope = abs(MVector3D.dotProduct(MVector3D(now_big_toe_relative_vec.x(), 0, now_big_toe_relative_vec.z()).normalized(), now_big_toe_relative_vec.normalized()))
-                now_small_slope = abs(MVector3D.dotProduct(MVector3D(now_small_toe_relative_vec.x(), 0, now_small_toe_relative_vec.z()).normalized(), now_small_toe_relative_vec.normalized()))
-
-                if (np.average([now_big_slope, now_small_slope]) > 0.92):
-                    # 大体水平の場合、足首の角度を初期化する
-                    ankle_fk_3ds, ankle_fk_matrixs = MServiceUtils.calc_global_pos(model, ankle_fk_links, motion, fno, return_matrix=True)
-                    ankle_pos = ankle_fk_3ds[f"{direction}つま先実体"]
-                    sole_pos = ankle_fk_3ds[f"{direction}足底実体"]
-
-                    ankle_slope_from_pos = ankle_pos
-                    ankle_slope_to_pos = MVector3D(ankle_pos.x(), sole_pos.y(), ankle_pos.z())
-
-                    ankle_slope_from_local_pos = ankle_fk_matrixs[f"{direction}足底実体"].inverted() * ankle_slope_from_pos
-                    ankle_slope_to_local_pos = ankle_fk_matrixs[f"{direction}足底実体"].inverted() * ankle_slope_to_pos
-
-                    # 足首角度を調整する
-                    ankle_bf.rotation = MQuaternion.rotationTo(ankle_slope_from_local_pos, ankle_slope_to_local_pos)
-                    motion.regist_bf(ankle_bf, ankle_bf.name, fno)
-
-                if fno // 500 > prev_sep_fno:
-                    logger.count(f"【初期足首水平化（{direction}）】", fno, fnos)
-                    prev_sep_fno = fno // 500
-            
     # 足ＩＫの接地準備
     def prepare_ground(self):
         logger.info("足ＩＫ接地", decoration=MLogger.DECORATION_LINE)
@@ -179,6 +110,7 @@ class ConvertLegFKtoIKService():
 
         # センター調整
         prev_sep_fno = 0
+        min_ys = []
         for fidx, fno in enumerate(fnos):
             right_fk_3ds = MServiceUtils.calc_global_pos(model, right_fk_links, motion, fno)
             right_toe_pos = right_fk_3ds["右つま先実体"]
@@ -188,141 +120,32 @@ class ConvertLegFKtoIKService():
             left_toe_pos = left_fk_3ds["左つま先実体"]
             left_sole_pos = left_fk_3ds["左足底実体"]
 
-            min_y = min(right_sole_pos.y(), left_sole_pos.y(), right_toe_pos.y(), left_toe_pos.y())
+            min_ys.append(right_sole_pos.y())
+            min_ys.append(left_sole_pos.y())
+            min_ys.append(right_toe_pos.y())
+            min_ys.append(left_toe_pos.y())
 
+            if fno // 500 > prev_sep_fno:
+                logger.count("【足ＩＫ接地準備】", fno, fnos)
+                prev_sep_fno = fno // 500
+
+        # 中央の値は大体接地していると見なす
+        median_leg_y = np.median(min_ys)
+        logger.debug("接地: median: %s", median_leg_y)
+        # # 中央上よりで調整
+        # median_leg_y = np.median(np.array(min_ys)[min_ys > median_leg_y])
+        # logger.debug("接地: median2: %s", median_leg_y)
+
+        prev_sep_fno = 0
+        for fidx, fno in enumerate(fnos):
             # Y位置を調整する
             center_y_bf = motion.calc_bf(center_y_bone_name, fno)
-            center_y_bf.position.setY(center_y_bf.position.y() - min_y)
+            center_y_bf.position.setY(center_y_bf.position.y() - median_leg_y)
             motion.regist_bf(center_y_bf, center_y_bone_name, fno)
 
             if fno // 500 > prev_sep_fno:
                 logger.count("【足ＩＫ接地】", fno, fnos)
                 prev_sep_fno = fno // 500
-        
-    # 足ＩＫの接地準備
-    def prepare_ground2(self):
-        logger.info("足ＩＫ接地固定", decoration=MLogger.DECORATION_LINE)
-
-        motion = self.options.motion
-        model = self.options.model
-
-        # 足FK末端までのリンク
-        right_fk_links = model.create_link_2_top_one("右つま先実体", is_defined=False)
-        left_fk_links = model.create_link_2_top_one("左つま先実体", is_defined=False)
-
-        # グルーブに値が入ってる場合、Yはグルーブに入れる
-        center_x_bone_name = "センター"
-        if not motion.is_active_bones("センター") and motion.is_active_bones("センターMX"):
-            center_x_bone_name = "センターMX"
-
-        center_y_bone_name = "センター"
-        if motion.is_active_bones("グルーブ"):
-            center_y_bone_name = "グルーブ"
-        elif not motion.is_active_bones("センター") and motion.is_active_bones("センターMX"):
-            center_y_bone_name = "グルーブMY"
-
-        center_z_bone_name = "センター"
-        if not motion.is_active_bones("センター") and motion.is_active_bones("センターMZ"):
-            center_z_bone_name = "センターMZ"
-
-        # 指定範囲内の足FKキーフレを取得
-        fnos = motion.get_bone_fnos("左足", "左ひざ", "左足首", "右足", "右ひざ", "右足首", "下半身", center_x_bone_name, center_y_bone_name, center_z_bone_name)
-
-        target_legs = {}
-        for lidx, (fromv, tov, ground_leg) in enumerate(self.options.target_legs):
-            for fno in fnos:
-                if fromv <= fno <= tov:
-                    target_legs[fno] = ground_leg
-
-        # # まずキー登録
-        # prev_sep_fno = 0
-        # for fidx, fno in enumerate(fnos):
-        #     center_x_bf = motion.calc_bf(center_x_bone_name, fno)
-        #     motion.regist_bf(center_x_bf, center_x_bone_name, fno)
-
-        #     if center_x_bone_name != center_y_bone_name:
-        #         center_y_bf = motion.calc_bf(center_y_bone_name, fno)
-        #         motion.regist_bf(center_y_bf, center_y_bone_name, fno)
-
-        #     if center_x_bone_name != center_z_bone_name:
-        #         center_z_bf = motion.calc_bf(center_z_bone_name, fno)
-        #         motion.regist_bf(center_z_bf, center_z_bone_name, fno)
-
-        #     if fno // 1000 > prev_sep_fno:
-        #         logger.count("【足ＩＫ接地準備①】", fno, fnos)
-        #         prev_sep_fno = fno // 1000
-
-        # センター調整
-        for lidx, (fromv, tov, ground_leg) in enumerate(self.options.target_legs):
-            fix_x_pos = MVector3D()
-            fix_z_pos = MVector3D()
-            for fidx, fno in enumerate(fnos):
-                if fromv <= fno <= tov:
-                    right_fk_3ds = MServiceUtils.calc_global_pos(model, right_fk_links, motion, fno)
-                    right_toe_pos = right_fk_3ds["右つま先実体"]
-                    right_sole_pos = right_fk_3ds["右足底実体"]
-
-                    left_fk_3ds = MServiceUtils.calc_global_pos(model, left_fk_links, motion, fno)
-                    left_toe_pos = left_fk_3ds["左つま先実体"]
-                    left_sole_pos = left_fk_3ds["左足底実体"]
-
-                    target_leg_x = None
-                    target_leg_z = None
-                    target_leg_ys = []
-                    if ground_leg == "右かかと":
-                        target_leg_x = right_sole_pos.x()
-                        target_leg_ys.append(right_sole_pos.y())
-                        target_leg_z = right_sole_pos.z()
-                    elif ground_leg == "左かかと":
-                        target_leg_x = left_sole_pos.x()
-                        target_leg_ys.append(left_sole_pos.y())
-                        target_leg_z = left_sole_pos.z()
-                    elif ground_leg == "右つま先":
-                        target_leg_x = right_toe_pos.x()
-                        target_leg_ys.append(right_toe_pos.y())
-                        target_leg_z = right_toe_pos.z()
-                    elif ground_leg == "左つま先":
-                        target_leg_x = left_toe_pos.x()
-                        target_leg_ys.append(left_toe_pos.y())
-                        target_leg_z = left_toe_pos.z()
-
-                    min_y = min(target_leg_ys)
-
-                    # Y位置を調整する
-                    center_y_bf = motion.calc_bf(center_y_bone_name, fno)
-                    center_y_bf.position.setY(center_y_bf.position.y() - min_y)
-                    motion.regist_bf(center_y_bf, center_y_bone_name, fno)
-
-                    # XZを固定する
-                    if fix_x_pos == MVector3D() and fix_z_pos == MVector3D():
-                        # 最初のキーフレで固定する
-                        fix_x_pos = MVector3D(target_leg_x, 0, 0)
-                        fix_z_pos = MVector3D(0, 0, target_leg_z)
-
-                    if center_x_bone_name == center_z_bone_name:
-                        # 固定位置からの差分
-                        diff_pos = (fix_x_pos + fix_z_pos) - MVector3D(target_leg_x, 0, target_leg_z)
-
-                        # 差分を加算
-                        center_bf = motion.calc_bf(center_x_bone_name, fno)
-                        center_bf.position += diff_pos
-                        motion.regist_bf(center_bf, center_x_bone_name, fno)
-                    else:
-                        # 固定位置からの差分
-                        diff_x_pos = fix_x_pos - MVector3D(target_leg_x, 0, 0)
-                        diff_z_pos = fix_z_pos - MVector3D(0, 0, target_leg_z)
-
-                        # X差分を加算
-                        center_x_bf = motion.calc_bf(center_x_bone_name, fno)
-                        center_x_bf.position += diff_x_pos
-                        motion.regist_bf(center_x_bf, center_x_bone_name, fno)
-
-                        # Z差分を加算
-                        center_z_bf = motion.calc_bf(center_z_bone_name, fno)
-                        center_z_bf.position += diff_z_pos
-                        motion.regist_bf(center_z_bf, center_z_bone_name, fno)
-
-            logger.info(f"-- 【足ＩＫ接地固定】{fromv} ～ {tov} F：{ground_leg}")
 
     # 足ＩＫ変換処理実行
     def convert_leg_fk2ik(self, direction: str):
@@ -383,6 +206,8 @@ class ConvertLegFKtoIKService():
             bf = motion.calc_bf(leg_ik_bone_name, fno)
             # 足ＩＫの位置は、足ＩＫの親から見た足首のローカル位置（足首位置マイナス）
             bf.position = leg_ik_parent_matrix.inverted() * (leg_fk_3ds_dic[ankle_bone_name] - (model.bones[ankle_bone_name].position - model.bones[ik_parent_name].position))
+            if bf.position.y() < 0:
+                bf.position.setY(0)
             bf.rotation = MQuaternion()
 
             # 一旦足ＩＫの位置が決まった時点で登録
@@ -392,8 +217,17 @@ class ConvertLegFKtoIKService():
             [logger.debug("f: %s, leg_ik_3ds_dic[%s]: %s", fno, k, v.to_log()) for k, v in leg_ik_3ds_dic.items()]
 
             # つま先のローカル位置
-            ankle_child_initial_local_pos = leg_ik_matrisxs[leg_ik_bone_name].inverted() * leg_ik_3ds_dic[toe_ik_bone_name]
-            ankle_child_local_pos = leg_ik_matrisxs[leg_ik_bone_name].inverted() * leg_toe_fk_3ds_dic[ankle_child_bone_name]
+            toe_global_pos = leg_ik_3ds_dic[toe_ik_bone_name]
+            ankle_child_initial_local_pos = leg_ik_matrisxs[leg_ik_bone_name].inverted() * toe_global_pos
+            ankle_child_global_pos = leg_toe_fk_3ds_dic[ankle_child_bone_name]
+            ankle_child_local_pos = leg_ik_matrisxs[leg_ik_bone_name].inverted() * ankle_child_global_pos
+            ankle_horizonal_pos = leg_ik_matrisxs[leg_ik_bone_name].inverted() * MVector3D(ankle_child_global_pos.x(), model.bones[ankle_child_bone_name].position.y(), ankle_child_global_pos.z())
+
+            ankle_slope = abs(MVector3D.dotProduct(ankle_horizonal_pos.normalized(), ankle_child_local_pos.normalized()))
+            if (self.options.ankle_horizonal_flg and (ankle_slope > 0.95)) or toe_global_pos.y() < 0:
+                logger.debug("f: %s, %s水平 %s ankle_child_local_pos: %s, ankle_horizonal_pos: %s", fno, direction, ankle_slope, ankle_child_local_pos.to_log(), ankle_horizonal_pos.to_log())
+                # 大体水平の場合、地面に対して水平
+                ankle_child_local_pos = ankle_horizonal_pos
 
             logger.debug("f: %s, ankle_child_initial_local_pos: %s", fno, ankle_child_initial_local_pos.to_log())
             logger.debug("f: %s, ankle_child_local_pos: %s", fno, ankle_child_local_pos.to_log())
@@ -410,6 +244,102 @@ class ConvertLegFKtoIKService():
 
         logger.info("変換完了　【%s足ＩＫ】", direction, decoration=MLogger.DECORATION_LINE)
 
+        if self.options.leg_error_tolerance > 0:
+            logger.info("足ＩＫブレ固定　【%s足ＩＫ】", direction, decoration=MLogger.DECORATION_LINE)
+
+            prev_sep_fno = 0
+            for prev_fno, next_fno in zip(fnos[:-3], fnos[3:]):
+                # つま先IK末端の位置
+                toe_ik_3ds = MServiceUtils.calc_global_pos(model, toe_ik_links, motion, prev_fno)
+                prev_toe_pos = toe_ik_3ds[toe_ik_bone_name]
+
+                # 足IKの位置
+                sole_ik_3ds = MServiceUtils.calc_global_pos(model, ik_links, motion, prev_fno)
+                prev_sole_pos = sole_ik_3ds[leg_ik_bone_name]
+
+                toe_poses = []
+                sole_poses = []
+                for fno in range(prev_fno + 1, next_fno + 1):
+                    # つま先IK末端の位置(Yはボーンの高さまで無視)
+                    toe_ik_3ds = MServiceUtils.calc_global_pos(model, toe_ik_links, motion, fno)
+                    toe_poses.append(np.array([toe_ik_3ds[toe_ik_bone_name].x(), max(model.bones[toe_ik_bone_name].position.y(), toe_ik_3ds[toe_ik_bone_name].y()), toe_ik_3ds[toe_ik_bone_name].z()]))
+
+                    # 足IKの位置(Yはボーンの高さまで無視)
+                    sole_ik_3ds = MServiceUtils.calc_global_pos(model, ik_links, motion, fno)
+                    sole_poses.append(np.array([sole_ik_3ds[leg_ik_bone_name].x(), max(model.bones[leg_ik_bone_name].position.y(), sole_ik_3ds[leg_ik_bone_name].y()), sole_ik_3ds[leg_ik_bone_name].z()]))
+                
+                # つま先IKの二点間距離
+                toe_distances = np.linalg.norm(np.array(toe_poses) - prev_toe_pos.data(), ord=2, axis=1)
+                
+                # 足IKの二点間距離
+                sole_distances = np.linalg.norm(np.array(sole_poses) - prev_sole_pos.data(), ord=2, axis=1)
+
+                if np.max(sole_distances) <= self.options.leg_error_tolerance and prev_sole_pos.y() < 0.5 + model.bones[leg_ik_bone_name].position.y():
+                    logger.debug("%s足固定(%s-%s): sole: %s", direction, prev_fno, next_fno, sole_distances)
+
+                    # 足IKがブレの許容範囲内である場合、固定
+                    prev_bf = motion.calc_bf(leg_ik_bone_name, prev_fno)
+
+                    # 接地
+                    prev_bf.position.setY(0)
+                    motion.regist_bf(prev_bf, leg_ik_bone_name, prev_fno)
+
+                    # つま先IKのグローバル位置を再計算
+                    toe_ik_3ds = MServiceUtils.calc_global_pos(model, toe_ik_links, motion, prev_fno)
+                    toe_ik_global_pos = toe_ik_3ds[toe_ik_bone_name]
+
+                    for fno in range(prev_fno + 1, next_fno + 1):
+                        bf = motion.calc_bf(leg_ik_bone_name, fno)
+                        bf.position = prev_bf.position.copy()
+                        motion.regist_bf(bf, leg_ik_bone_name, fno)
+
+                    for fno in range(prev_fno, next_fno + 1):
+                        # つま先IKのグローバル位置を再計算
+                        toe_ik_3ds = MServiceUtils.calc_global_pos(model, toe_ik_links, motion, fno)
+                        toe_ik_global_pos = toe_ik_3ds[toe_ik_bone_name]
+
+                        if toe_ik_global_pos.y() < 0:
+                            # 足IKの行列を再計算
+                            sole_ik_3ds, sole_mats = MServiceUtils.calc_global_pos(model, ik_links, motion, fno, return_matrix=True)
+
+                            toe_ik_local_prev_pos = sole_mats[leg_ik_bone_name].inverted() * toe_ik_global_pos
+                            toe_ik_local_now_pos = sole_mats[leg_ik_bone_name].inverted() * MVector3D(toe_ik_global_pos.x(), model.bones[toe_ik_bone_name].position.y(), toe_ik_global_pos.z())
+
+                            adjust_toe_qq = MQuaternion.rotationTo(toe_ik_local_prev_pos, toe_ik_local_now_pos)
+                            logger.debug("%sつま先ゼロ(%s-%s): toe_ik_global_pos: %s, adjust_toe_qq: %s", direction, prev_fno, next_fno, toe_ik_global_pos.to_log(),
+                                         adjust_toe_qq.toEulerAngles4MMD().to_log())
+
+                            prev_bf = motion.calc_bf(leg_ik_bone_name, prev_fno)
+                            bf = motion.calc_bf(leg_ik_bone_name, fno)
+                            bf.rotation *= adjust_toe_qq
+
+                            if fno > prev_fno and MQuaternion.dotProduct(prev_bf.rotation, bf.rotation) > 0.95:
+                                logger.debug("%sつま先回転コピー(%s-%s): toe_ik_global_pos: %s, prev: %s, now: %s", direction, prev_fno, next_fno, toe_ik_global_pos.to_log(),
+                                             prev_bf.rotation.toEulerAngles4MMD().to_log(), bf.rotation.toEulerAngles4MMD().to_log())
+                                bf.rotation = prev_bf.rotation.copy()
+                                
+                            motion.regist_bf(bf, leg_ik_bone_name, fno)
+
+                elif np.max(toe_distances) <= self.options.leg_error_tolerance and prev_sole_pos.y() < 0.5 + model.bones[leg_ik_bone_name].position.y():
+                    logger.debug("%sつま先固定(%s-%s): sole: %s", direction, prev_fno, next_fno, toe_distances)
+
+                    # つま先位置がブレの許容範囲内である場合、つま先を固定する位置に足IKを置く
+                    prev_bf = motion.calc_bf(leg_ik_bone_name, prev_fno)
+
+                    for fidx, fno in enumerate(range(prev_fno + 1, next_fno + 1)):
+                        # つま先のグローバル位置
+                        toe_pos = MVector3D(toe_poses[fidx])
+
+                        bf = motion.calc_bf(leg_ik_bone_name, fno)
+                        bf.position = prev_bf.position.copy() - (toe_pos - prev_toe_pos)
+                        motion.regist_bf(bf, leg_ik_bone_name, fno)
+                else:
+                    logger.debug("×%s固定なし(%s-%s): prev: %s, sole: %s, toe: %s", direction, prev_fno, next_fno, prev_sole_pos.to_log(), sole_distances, toe_distances)
+
+                if prev_fno // 500 > prev_sep_fno:
+                    logger.count(f"【{direction}足ＩＫブレ固定】", prev_fno, fnos)
+                    prev_sep_fno = prev_fno // 500
+
         # IKon
         for showik in self.options.motion.showiks:
             for ikf in showik.ik:
@@ -422,6 +352,3 @@ class ConvertLegFKtoIKService():
                                                       self.options.model.bones[leg_ik_bone_name].getTranslatable())
         
         return True
-
-
-

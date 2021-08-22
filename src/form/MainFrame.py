@@ -185,5 +185,9 @@ class MainFrame(wx.Frame):
         # スピンコントロール変更時
         if event.GetWheelRotation() > 0:
             event.GetEventObject().SetValue(event.GetEventObject().GetValue() + inc)
+            if event.GetEventObject().GetValue() >= 0:
+                event.GetEventObject().SetBackgroundColour("WHITE")
         else:
             event.GetEventObject().SetValue(event.GetEventObject().GetValue() - inc)
+            if event.GetEventObject().GetValue() < 0:
+                event.GetEventObject().SetBackgroundColour("TURQUOISE")

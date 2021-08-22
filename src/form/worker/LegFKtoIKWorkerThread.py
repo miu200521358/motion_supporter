@@ -43,9 +43,9 @@ class LegFKtoIKWorkerThread(BaseWorkerThread):
                     logging_level=self.frame.logging_level, \
                     motion=self.frame.leg_fk2ik_panel_ctrl.leg_fk2ik_vmd_file_ctrl.data.copy(), \
                     model=self.frame.leg_fk2ik_panel_ctrl.leg_fk2ik_model_file_ctrl.data, \
-                    target_legs=self.frame.leg_fk2ik_panel_ctrl.leg_ground_dialog.get_leg_list(), \
                     ground_leg_flg=self.frame.leg_fk2ik_panel_ctrl.ground_leg_flg_ctrl.GetValue(), \
                     ankle_horizonal_flg=self.frame.leg_fk2ik_panel_ctrl.ankle_horizonal_flg_ctrl.GetValue(), \
+                    leg_error_tolerance=round(self.frame.leg_fk2ik_panel_ctrl.leg_error_tolerance_ctrl.GetValue(), 3), \
                     output_path=self.frame.leg_fk2ik_panel_ctrl.output_leg_fk2ik_vmd_file_ctrl.file_ctrl.GetPath(), \
                     remove_unnecessary_flg=self.frame.leg_fk2ik_panel_ctrl.remove_unnecessary_flg_ctrl.GetValue(), \
                     monitor=self.frame.leg_fk2ik_panel_ctrl.console_ctrl, \
