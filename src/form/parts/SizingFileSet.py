@@ -7,6 +7,7 @@ import wx.lib.newevent
 from form.parts.BaseFilePickerCtrl import BaseFilePickerCtrl
 from form.parts.HistoryFilePickerCtrl import HistoryFilePickerCtrl
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
+from mmd.PmxData import PmxModel
 from utils import MFormUtils, MFileUtils # noqa
 from utils.MLogger import MLogger # noqa
 
@@ -21,7 +22,7 @@ class SizingFileSet():
         self.panel = panel
         self.set_no = set_no
         self.STANCE_DETAIL_CHOICES = ["センターXZ補正", "上半身補正", "下半身補正", "足ＩＫ補正", "つま先補正", "つま先ＩＫ補正", "肩補正", "センターY補正"]
-        self.selected_stance_details = range(len(self.STANCE_DETAIL_CHOICES))
+        self.selected_stance_details = [0, 1, 2, 4, 5, 6, 7]
 
         if self.set_no == 1:
             # ファイルパネルのはそのまま追加
@@ -141,10 +142,13 @@ class SizingFileSet():
             display_set_no = "{0}番目の".format(self.set_no)
         
         # 両方のPMXが読めて、モーションも読み込めた場合、キーチェック
-        not_org_bones = []
+        not_org_standard_bones = []
+        not_org_other_bones = []
         not_org_morphs = []
-        not_rep_bones = []
+        not_rep_standard_bones = []
+        not_rep_other_bones = []
         not_rep_morphs = []
+        mismatch_bones = []
 
         motion = self.motion_vmd_file_ctrl.data
         org_pmx = self.org_model_file_ctrl.data
@@ -169,10 +173,35 @@ class SizingFileSet():
                     # キーが存在しており、かつ初期値ではない値が入っている場合、警告対象
 
                     if k not in org_pmx.bones:
-                        not_org_bones.append(k)
+                        if k in PmxModel.PARENT_BORN_PAIR:
+                            not_org_standard_bones.append(k)
+                        else:
+                            not_org_other_bones.append(k)
 
                     if k not in rep_pmx.bones:
-                        not_rep_bones.append(k)
+                        if k in PmxModel.PARENT_BORN_PAIR:
+                            not_rep_standard_bones.append(k)
+                        else:
+                            not_rep_other_bones.append(k)
+                    
+                    if k in org_pmx.bones and k in rep_pmx.bones:
+                        mismatch_types = []
+                        # 両方にボーンがある場合、フラグが同じであるかチェック
+                        if org_pmx.bones[k].getRotatable() != rep_pmx.bones[k].getRotatable():
+                            mismatch_types.append("性能:回転")
+                        if org_pmx.bones[k].getTranslatable() != rep_pmx.bones[k].getTranslatable():
+                            mismatch_types.append("性能:移動")
+                        if org_pmx.bones[k].getIkFlag() != rep_pmx.bones[k].getIkFlag():
+                            mismatch_types.append("性能:IK")
+                        if org_pmx.bones[k].getVisibleFlag() != rep_pmx.bones[k].getVisibleFlag():
+                            mismatch_types.append("性能:表示")
+                        if org_pmx.bones[k].getManipulatable() != rep_pmx.bones[k].getManipulatable():
+                            mismatch_types.append("性能:操作")
+                        if org_pmx.bones[k].display != rep_pmx.bones[k].display:
+                            mismatch_types.append("表示枠")
+
+                        if len(mismatch_types) > 0:
+                            mismatch_bones.append(f"{k} 　【差異】{', '.join(mismatch_types)}）")
                     
                     # 1件あればOK
                     break
@@ -192,14 +221,19 @@ class SizingFileSet():
                     # 1件あればOK
                     break
 
-        if len(not_org_bones) > 0 or len(not_org_morphs) > 0:
-            logger.warning("%s%sに、モーションで使用されているボーン・モーフが不足しています。\nモデル: %s\n不足ボーン: %s\n不足モーフ: %s", \
-                           display_set_no, self.org_model_file_ctrl.title, org_pmx.name, ",".join(not_org_bones), ",".join(not_org_morphs), decoration=MLogger.DECORATION_BOX)
+        if len(not_org_standard_bones) > 0 or len(not_org_other_bones) > 0 or len(not_org_morphs) > 0:
+            logger.warning("%s%sに、モーションで使用されているボーン・モーフが不足しています。\nモデル: %s\n不足ボーン（準標準まで）: %s\n不足ボーン（その他）: %s\n不足モーフ: %s", \
+                           display_set_no, self.org_model_file_ctrl.title, org_pmx.name, ",".join(not_org_standard_bones), ",".join(not_org_other_bones), ",".join(not_org_morphs), decoration=MLogger.DECORATION_BOX)
             is_warning = True
 
-        if len(not_rep_bones) > 0 or len(not_rep_morphs) > 0:
-            logger.warning("%s%sに、モーションで使用されているボーン・モーフが不足しています。\nモデル: %s\n不足ボーン: %s\n不足モーフ: %s", \
-                           display_set_no, self.rep_model_file_ctrl.title, rep_pmx.name, ",".join(not_rep_bones), ",".join(not_rep_morphs), decoration=MLogger.DECORATION_BOX)
+        if len(not_rep_standard_bones) > 0 or len(not_rep_other_bones) > 0 or len(not_rep_morphs) > 0:
+            logger.warning("%s%sに、モーションで使用されているボーン・モーフが不足しています。\nモデル: %s\n不足ボーン（準標準まで）: %s\n不足ボーン（その他）: %s\n不足モーフ: %s", \
+                           display_set_no, self.rep_model_file_ctrl.title, rep_pmx.name, ",".join(not_rep_standard_bones), ",".join(not_rep_other_bones), ",".join(not_rep_morphs), decoration=MLogger.DECORATION_BOX)
+            is_warning = True
+
+        if len(mismatch_bones) > 0:
+            logger.warning("%s%sで、モーションで使用されているボーンの性能等が異なっています。\nモデル: %s\n差異ボーン:\n　%s", \
+                           display_set_no, self.rep_model_file_ctrl.title, rep_pmx.name, "\n　".join(mismatch_bones), decoration=MLogger.DECORATION_BOX)
             is_warning = True
 
         if not is_warning:
@@ -238,7 +272,8 @@ class SizingFileSet():
             self.rep_model_file_ctrl.title_parts_ctrl.GetValue(),
             self.frame.arm_panel_ctrl.arm_process_flg_avoidance.GetValue(),
             self.frame.arm_panel_ctrl.arm_process_flg_alignment.GetValue(),
-            (self.set_no in self.frame.morph_panel_ctrl.morph_set_dict and self.frame.morph_panel_ctrl.morph_set_dict[self.set_no].is_set_morph()),
+            (self.set_no in self.frame.morph_panel_ctrl.morph_set_dict and self.frame.morph_panel_ctrl.morph_set_dict[self.set_no].is_set_morph()) \
+            or (self.set_no in self.frame.morph_panel_ctrl.bulk_morph_set_dict and len(self.frame.morph_panel_ctrl.bulk_morph_set_dict[self.set_no]) > 0),
             self.output_vmd_file_ctrl.file_ctrl.GetPath(), is_force)
 
         self.output_vmd_file_ctrl.file_ctrl.SetPath(output_vmd_path)
