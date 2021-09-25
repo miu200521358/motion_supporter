@@ -810,7 +810,7 @@ class PmxReader:
                         morph.offsets = [self.read_uv_morph_data() for _ in range(offset_size)]
                     elif morph.morph_type == 8:
                         # material
-                        morph.data = [self.read_material_morph_data() for _ in range(offset_size)]
+                        morph.offsets = [self.read_material_morph_data() for _ in range(offset_size)]
                     else:
                         raise MParseException("unknown morph type: {0}".format(morph.morph_type))
 
@@ -818,6 +818,8 @@ class PmxReader:
                     morph.index = morph_idx
                     # インデックス逆引きも登録
                     pmx.morph_indexes[morph.index] = morph.name
+                    # そのままで保持
+                    pmx.org_morphs[morph.name] = morph
 
                     if morph.panel not in morphs_by_panel.keys():
                         # ないと思うが念のためパネル情報がなければ追加
@@ -890,10 +892,10 @@ class PmxReader:
                         mode=self.read_int(1)
                     )
 
-                    if rigidbody.no_collision_group < 0:
-                        rigidbody.no_collision_group = 0
-                        for nc in range(16):
-                            rigidbody.no_collision_group |= 1 << nc
+                    # if rigidbody.no_collision_group < 0:
+                    #     rigidbody.no_collision_group = 0
+                    #     for nc in range(16):
+                    #         rigidbody.no_collision_group |= 1 << nc
 
                     # ボーンのINDEX
                     rigidbody.index = rigidbody_idx
@@ -1203,7 +1205,7 @@ class PmxReader:
         else:
             raise MParseException("read_uint format_sizeエラー {0}".format(format_size))
 
-        return self.unpack(format_size, format_type)
+        return int(self.unpack(format_size, format_type))
 
     # 小数の解凍
     def read_float(self, format_size=4):
@@ -1214,7 +1216,7 @@ class PmxReader:
         else:
             raise MParseException("read_float format_sizeエラー {0}".format(format_size))
 
-        return self.unpack(format_size, format_type)
+        return float(self.unpack(format_size, format_type))
 
     # 解凍して、offsetを更新する
     def unpack(self, format_size, format):

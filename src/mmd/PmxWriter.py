@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 import struct
-from mmd.PmxData import PmxModel, Bone, RigidBody, Vertex, Material, Morph, DisplaySlot, RigidBody, Joint, Ik, IkLink, Bdef1, Bdef2, Bdef4, Sdef, Qdef, VertexMorphOffset, GroupMorphData    # noqa
+from mmd.PmxData import PmxModel, Bone, RigidBody, Vertex, Material, Morph, DisplaySlot, RigidBody, Joint, Ik, IkLink, Bdef1, Bdef2, Bdef4, Sdef, Qdef, VertexMorphOffset, GroupMorphData, BoneMorphData, UVMorphData, MaterialMorphData    # noqa
 from module.MMath import MVector3D # noqa
 from utils.MLogger import MLogger # noqa
 
@@ -47,7 +47,7 @@ class PmxWriter:
             bone_idx_size, bone_idx_type = self.define_index_size(len(pmx.bones))
             fout.write(struct.pack(TYPE_BYTE, bone_idx_size))
             # モーフIndexサイズ | 1,2,4 のいずれか
-            morph_idx_size, morph_idx_type = self.define_index_size(len(pmx.morphs))
+            morph_idx_size, morph_idx_type = self.define_index_size(len(pmx.org_morphs))
             fout.write(struct.pack(TYPE_BYTE, morph_idx_size))
             # 剛体Indexサイズ | 1,2,4 のいずれか
             rigidbody_idx_size, rigidbody_idx_type = self.define_index_size(len(pmx.rigidbodies))
@@ -273,9 +273,9 @@ class PmxWriter:
             logger.debug(f"-- ボーンデータ出力終了({len(list(pmx.bones.values()))})")
 
             # モーフの数
-            fout.write(struct.pack(TYPE_INT, len(list(pmx.morphs.values()))))
+            fout.write(struct.pack(TYPE_INT, len(list(pmx.org_morphs.values()))))
 
-            for midx, morph in enumerate(pmx.morphs.values()):
+            for midx, morph in enumerate(pmx.org_morphs.values()):
                 # モーフ名
                 self.write_text(fout, morph.name, f"Morph {midx}")
                 self.write_text(fout, morph.english_name, f"Morph {midx}")
@@ -293,7 +293,57 @@ class PmxWriter:
                         fout.write(struct.pack(TYPE_FLOAT, float(offset.position_offset.x())))
                         fout.write(struct.pack(TYPE_FLOAT, float(offset.position_offset.y())))
                         fout.write(struct.pack(TYPE_FLOAT, float(offset.position_offset.z())))
+                    elif type(offset) is UVMorphData:
+                        # UVモーフ
+                        fout.write(struct.pack(vertex_idx_type, offset.vertex_index))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.uv.x())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.uv.y())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.uv.z())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.uv.w())))
+                    elif type(offset) is BoneMorphData:
+                        # ボーンモーフ
+                        fout.write(struct.pack(bone_idx_type, offset.bone_index))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.position.x())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.position.y())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.position.z())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.rotation.x())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.rotation.y())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.rotation.z())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.rotation.scalar())))
+                    elif type(offset) is MaterialMorphData:
+                        # 材質モーフ
+                        fout.write(struct.pack(material_idx_type, offset.material_index))
+                        fout.write(struct.pack(TYPE_BYTE, int(offset.calc_mode)))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.diffuse.x())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.diffuse.y())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.diffuse.z())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.diffuse.w())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.specular.x())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.specular.y())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.specular.z())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.specular_factor)))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.ambient.x())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.ambient.y())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.ambient.z())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.edge_color.x())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.edge_color.y())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.edge_color.z())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.edge_color.w())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.edge_size)))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.texture_factor.x())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.texture_factor.y())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.texture_factor.z())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.texture_factor.w())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.sphere_texture_factor.x())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.sphere_texture_factor.y())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.sphere_texture_factor.z())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.sphere_texture_factor.w())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.toon_texture_factor.x())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.toon_texture_factor.y())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.toon_texture_factor.z())))
+                        fout.write(struct.pack(TYPE_FLOAT, float(offset.toon_texture_factor.w())))
                     elif type(offset) is GroupMorphData:
+                        # グループモーフ
                         fout.write(struct.pack(morph_idx_type, offset.morph_index))
                         fout.write(struct.pack(TYPE_FLOAT, float(offset.value)))
 
@@ -310,20 +360,16 @@ class PmxWriter:
                 fout.write(struct.pack(TYPE_BYTE, display_slot.special_flag))
                 # 枠内要素数
                 fout.write(struct.pack(TYPE_INT, len(display_slot.references)))
-                if display_slot.display_type == 0:
-                    # ボーンの場合
-                    for bone_idx in display_slot.references:
-                        # 要素対象 0:ボーン 1:モーフ
-                        fout.write(struct.pack(TYPE_BYTE, 0))
+                # ボーンの場合
+                for display_type, bone_idx in display_slot.references:
+                    # 要素対象 0:ボーン 1:モーフ
+                    fout.write(struct.pack(TYPE_BYTE, display_type))
+                    if display_type == 0:
                         # ボーンIndex
                         fout.write(struct.pack(bone_idx_type, bone_idx))
-                elif display_slot.display_type == 1:
-                    # モーフの場合
-                    for morph_idx in display_slot.references:
-                        # 要素対象 0:ボーン 1:モーフ
-                        fout.write(struct.pack(TYPE_BYTE, 1))
-                        # ボーンIndex
-                        fout.write(struct.pack(morph_idx_type, morph_idx))
+                    else:
+                        # モーフIndex
+                        fout.write(struct.pack(morph_idx_type, bone_idx))
 
             logger.debug(f"-- 表示枠データ出力終了({len(list(pmx.display_slots.values()))})")
 
@@ -339,7 +385,7 @@ class PmxWriter:
                 # 1  : byte	| グループ
                 fout.write(struct.pack(TYPE_BYTE, rigidbody.collision_group))
                 # 2  : ushort	| 非衝突グループフラグ
-                fout.write(struct.pack(TYPE_UNSIGNED_SHORT, rigidbody.no_collision_group))
+                fout.write(struct.pack(TYPE_SHORT, rigidbody.no_collision_group))
                 # 1  : byte	| 形状 - 0:球 1:箱 2:カプセル
                 fout.write(struct.pack(TYPE_BYTE, rigidbody.shape_type))
                 # 12 : float3	| サイズ(x,y,z)
@@ -418,10 +464,10 @@ class PmxWriter:
             logger.debug(f"-- ジョイントデータ出力終了({len(list(pmx.joints.values()))})")
             
     def define_index_size(self, size: int):
-        if 32768 < size:
+        if 32768 <= size:
             idx_size = 4
             idx_type = TYPE_INT
-        elif 1 < size < 32767:
+        elif 128 <= size <= 32767:
             idx_size = 2
             idx_type = TYPE_SHORT
         else:
