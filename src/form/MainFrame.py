@@ -14,12 +14,12 @@ from form.panel.LegFKtoIKPanel import LegFKtoIKPanel
 from form.panel.BlendPanel import BlendPanel
 from form.panel.BezierPanel import BezierPanel
 from form.panel.SmoothPanel import SmoothPanel
-from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
-from utils import MFormUtils, MFileUtils # noqa
-from utils.MLogger import MLogger # noqa
+from form.panel.MorphConditionPanel import MorphConditionPanel
+from utils import MFormUtils, MFileUtils  # noqa
+from utils.MLogger import MLogger  # noqa
 
 if os.name == "nt":
-    import winsound     # Windows版のみインポート
+    import winsound  # Windows版のみインポート
 
 logger = MLogger(__name__)
 
@@ -30,8 +30,9 @@ logger = MLogger(__name__)
 
 
 class MainFrame(wx.Frame):
-
-    def __init__(self, parent, mydir_path: str, version_name: str, logging_level: int, is_saving: bool, is_out_log: bool):
+    def __init__(
+        self, parent, mydir_path: str, version_name: str, logging_level: int, is_saving: bool, is_out_log: bool
+    ):
         self.version_name = version_name
         self.logging_level = logging_level
         self.is_out_log = is_out_log
@@ -39,12 +40,19 @@ class MainFrame(wx.Frame):
         self.mydir_path = mydir_path
         self.elapsed_time = 0
         self.popuped_finger_warning = False
-        
+
         self.worker = None
         self.load_worker = None
 
-        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"モーションサポーター ローカル版 {0}".format(self.version_name), \
-                          pos=wx.DefaultPosition, size=wx.Size(600, 650), style=wx.DEFAULT_FRAME_STYLE | wx.TAB_TRAVERSAL)
+        wx.Frame.__init__(
+            self,
+            parent,
+            id=wx.ID_ANY,
+            title="モーションサポーター ローカル版 {0}".format(self.version_name),
+            pos=wx.DefaultPosition,
+            size=wx.Size(600, 650),
+            style=wx.DEFAULT_FRAME_STYLE | wx.TAB_TRAVERSAL,
+        )
 
         # ファイル履歴読み込み
         self.file_hitories = MFileUtils.read_history(self.mydir_path)
@@ -78,44 +86,48 @@ class MainFrame(wx.Frame):
 
         # 全親タブ
         self.parent_panel_ctrl = ParentPanel(self, self.note_ctrl, 1)
-        self.note_ctrl.AddPage(self.parent_panel_ctrl, u"全親移植", False)
-        
+        self.note_ctrl.AddPage(self.parent_panel_ctrl, "全親移植", False)
+
         # ゆらぎタブ
         self.noise_panel_ctrl = NoisePanel(self, self.note_ctrl, 2)
-        self.note_ctrl.AddPage(self.noise_panel_ctrl, u"ゆらぎ複製", False)
-        
+        self.note_ctrl.AddPage(self.noise_panel_ctrl, "ゆらぎ複製", False)
+
         # 多段分割タブ
         self.multi_split_panel_ctrl = MultiSplitPanel(self, self.note_ctrl, 3)
-        self.note_ctrl.AddPage(self.multi_split_panel_ctrl, u"多段分割", False)
-        
+        self.note_ctrl.AddPage(self.multi_split_panel_ctrl, "多段分割", False)
+
         # 多段統合タブ
         self.multi_join_panel_ctrl = MultiJoinPanel(self, self.note_ctrl, 4)
-        self.note_ctrl.AddPage(self.multi_join_panel_ctrl, u"多段統合", False)
-        
+        self.note_ctrl.AddPage(self.multi_join_panel_ctrl, "多段統合", False)
+
         # 足FK2FKタブ
         self.leg_fk2ik_panel_ctrl = LegFKtoIKPanel(self, self.note_ctrl, 5)
-        self.note_ctrl.AddPage(self.leg_fk2ik_panel_ctrl, u"足FKtoIK", False)
+        self.note_ctrl.AddPage(self.leg_fk2ik_panel_ctrl, "足FKtoIK", False)
 
         # 腕IKtoFKタブ
         self.arm_ik2fk_panel_ctrl = ArmIKtoFKPanel(self, self.note_ctrl, 6)
-        self.note_ctrl.AddPage(self.arm_ik2fk_panel_ctrl, u"腕IKtoFK", False)
-        
+        self.note_ctrl.AddPage(self.arm_ik2fk_panel_ctrl, "腕IKtoFK", False)
+
         # スムーズタブ
         self.smooth_panel_ctrl = SmoothPanel(self, self.note_ctrl, 7)
-        self.note_ctrl.AddPage(self.smooth_panel_ctrl, u"スムーズ", False)
+        self.note_ctrl.AddPage(self.smooth_panel_ctrl, "スムーズ", False)
 
         # ブレンドタブ
         self.blend_panel_ctrl = BlendPanel(self, self.note_ctrl, 8)
-        self.note_ctrl.AddPage(self.blend_panel_ctrl, u"ブレンド", False)
+        self.note_ctrl.AddPage(self.blend_panel_ctrl, "ブレンド", False)
+
+        # モーフ条件調整タブ
+        self.morph_condition_panel_ctrl = MorphConditionPanel(self, self.note_ctrl, 9)
+        self.note_ctrl.AddPage(self.morph_condition_panel_ctrl, "モーフ条件調整", False)
+
+        # 捩りOFFタブ
+        self.arm_twist_off_panel_ctrl = ArmTwistOffPanel(self, self.note_ctrl, 10)
+        self.note_ctrl.AddPage(self.arm_twist_off_panel_ctrl, "捩りOFF", False)
 
         # 補間タブ
-        self.bezier_panel_ctrl = BezierPanel(self, self.note_ctrl, 9)
-        self.note_ctrl.AddPage(self.bezier_panel_ctrl, u"補間", False)
-                
-        # # 捩りOFFタブ
-        # self.arm_twist_off_panel_ctrl = ArmTwistOffPanel(self, self.note_ctrl, 9)
-        # self.note_ctrl.AddPage(self.arm_twist_off_panel_ctrl, u"捩りOFF", False)
-        
+        self.bezier_panel_ctrl = BezierPanel(self, self.note_ctrl, 11)
+        self.note_ctrl.AddPage(self.bezier_panel_ctrl, "補間", False)
+
         # ---------------------------------------------
 
         # タブ押下時の処理
@@ -132,7 +144,7 @@ class MainFrame(wx.Frame):
         self.Layout()
 
         self.Centre(wx.BOTH)
-    
+
     def on_idle(self, event: wx.Event):
         pass
 
@@ -150,6 +162,16 @@ class MainFrame(wx.Frame):
 
         elif self.blend_panel_ctrl.is_fix_tab:
             self.note_ctrl.ChangeSelection(self.blend_panel_ctrl.tab_idx)
+            event.Skip()
+            return
+
+        elif self.morph_condition_panel_ctrl.is_fix_tab:
+            self.note_ctrl.ChangeSelection(self.morph_condition_panel_ctrl.tab_idx)
+            event.Skip()
+            return
+
+        elif self.arm_twist_off_panel_ctrl.is_fix_tab:
+            self.note_ctrl.ChangeSelection(self.arm_twist_off_panel_ctrl.tab_idx)
             event.Skip()
             return
 
