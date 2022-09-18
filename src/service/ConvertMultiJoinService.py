@@ -79,7 +79,7 @@ class ConvertMultiJoinService():
         fnos = motion.get_bone_fnos(rrxbn, rrybn, rrzbn, rmxbn, rmybn, rmzbn)
 
         if len(fnos) == 0:
-            return
+            return False
 
         # まずは全打ち
         prev_sep_fno = 0

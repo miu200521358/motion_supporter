@@ -52,7 +52,6 @@ cdef class Bone:
     cdef public int index
     cdef public bint display
     cdef public bint is_sizing
-    cdef public MVector3D relative_position
 
     cdef public float len_1d
     cdef public MVector3D len_3d
@@ -133,6 +132,7 @@ cdef class OBB:
 
 cdef class PmxModel:
     cdef public str path
+    cdef public dict json_data
     cdef public int extended_uv
     cdef public str name
     cdef public str english_name
