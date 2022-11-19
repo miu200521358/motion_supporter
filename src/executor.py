@@ -15,7 +15,7 @@ from utils.MLogger import MLogger
 from utils import MFileUtils
 from utils.MException import SizingException
 
-VERSION_NAME = "1.05"
+VERSION_NAME = "1.06"
 
 # 指数表記なし、有効小数点桁数6、30を超えると省略あり、一行の文字数200
 np.set_printoptions(suppress=True, precision=6, threshold=30, linewidth=200)
@@ -23,12 +23,12 @@ np.set_printoptions(suppress=True, precision=6, threshold=30, linewidth=200)
 # Windowsマルチプロセス対策
 multiprocessing.freeze_support()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     mydir_path = MFileUtils.get_mydir_path(sys.argv[0])
 
     if len(sys.argv) > 3 and "--motion_path" in sys.argv:
         if os.name == "nt":
-            import winsound     # Windows版のみインポート
+            import winsound  # Windows版のみインポート
 
         # 引数指定がある場合、コマンドライン実行
         # try:
@@ -54,7 +54,7 @@ if __name__ == '__main__':
         parser.add_argument("--out_log", default=0, type=int)
         parser.add_argument("--is_saving", default=1, type=int)
         args = parser.parse_args()
-        
+
         # ロギングレベル
         is_out_log = True if args.out_log == 1 else False
         # 省エネモード
@@ -86,7 +86,7 @@ if __name__ == '__main__':
 
         # 引数指定がない場合、通常起動
         app = wx.App(False)
-        icon = wx.Icon(MFileUtils.resource_path('src/MotionSupporter.ico'), wx.BITMAP_TYPE_ICO)
+        icon = wx.Icon(MFileUtils.resource_path("src/MotionSupporter.ico"), wx.BITMAP_TYPE_ICO)
         frame = MainFrame(None, mydir_path, now_version_name, args.verbose, is_saving, is_out_log)
         frame.SetIcon(icon)
         frame.Show(True)

@@ -11,7 +11,7 @@ from mmd.PmxData import PmxModel # noqa
 from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
 from mmd.VmdWriter import VmdWriter
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
-from utils import MUtils, MServiceUtils, MBezierUtils # noqa
+from utils import MServiceUtils, MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
 from utils.MException import SizingException, MKilledException
 
@@ -79,7 +79,7 @@ class ConvertMultiJoinService():
         fnos = motion.get_bone_fnos(rrxbn, rrybn, rrzbn, rmxbn, rmybn, rmzbn)
 
         if len(fnos) == 0:
-            return
+            return False
 
         # まずは全打ち
         prev_sep_fno = 0

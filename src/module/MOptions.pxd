@@ -165,6 +165,18 @@ cdef class MSmoothOptions():
     cdef public bint is_file
     cdef public str outout_datetime
 
+
+cdef class MMorphConditionOptions:
+    cdef public str version_name
+    cdef public int logging_level
+    cdef public VmdMotion motion
+    cdef public list target_morphs
+    cdef public str output_path
+    cdef public object monitor
+    cdef public bint is_file
+    cdef public str outout_datetime
+    cdef public int max_workers
+
 cdef c_smooth_parse(str version_name)
 
 

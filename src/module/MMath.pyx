@@ -969,8 +969,11 @@ cdef class MQuaternion:
     cpdef effective(self):
         self.data().components[np.isnan(self.data().components)] = 0
         self.data().components[np.isinf(self.data().components)] = 0
-        # Scalarは1がデフォルトとなる
-        self.setScalar(1 if self.scalar() == 0 else self.scalar())
+        # # Scalarは1がデフォルトとなる
+        # self.setScalar(1 if self.scalar() == 0 else self.scalar())
+        if np.isclose(self.data().components, 0).all():
+            # すべてが0の場合、scalarだけ1に設定する
+            self.setScalar(1)
 
     cpdef MMatrix4x4 toMatrix4x4(self):
         cdef MMatrix4x4 mat = MMatrix4x4()

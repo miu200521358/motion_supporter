@@ -213,6 +213,20 @@ cdef class MSmoothOptions():
         return c_smooth_parse(version_name)
 
 
+cdef class MMorphConditionOptions:
+    def __init__(self, str version_name, int logging_level, int max_workers, VmdMotion motion, list target_morphs, str output_path, object monitor, bint is_file, str outout_datetime):
+        self.version_name = version_name
+        self.logging_level = logging_level
+        self.motion = motion
+        self.target_morphs = target_morphs
+        self.output_path = output_path
+        self.monitor = monitor
+        self.is_file = is_file
+        self.outout_datetime = outout_datetime
+        self.max_workers = max_workers
+
+
+
 cdef c_smooth_parse(str version_name):
     parser = argparse.ArgumentParser()
     parser.add_argument('--motion_path', dest='motion_path', help='input vmd', type=str)
