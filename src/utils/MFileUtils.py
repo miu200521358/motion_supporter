@@ -44,6 +44,7 @@ def read_history(mydir_path):
         "arm_twist_off_vmd": [],
         "arm_twist_off_pmx": [],
         "morph_condition_vmd": [],
+        "trajectory_vmd": [],
         "max": 50,
     }
     file_hitories = cPickle.loads(cPickle.dumps(base_file_hitories, -1))
@@ -941,6 +942,80 @@ def is_auto_morph_condition_vmd_output_path(
 
     # 自動生成ルールに則ったファイルパスである場合、合致あり
     return re.match(new_output_morph_condition_vmd_pattern, output_morph_condition_vmd_path) is not None
+
+
+# モーフ調整VMD出力ファイルパス生成
+# base_file_path: モーションVMDパス
+# output_trajectory_pmx_path: 出力ファイルパス
+def get_output_trajectory_pmx_path(base_file_path: str, output_trajectory_pmx_path: str, is_force=False):
+    # モーションVMDパスの拡張子リスト
+    if not os.path.exists(base_file_path):
+        return ""
+
+    # モーションVMDディレクトリパス
+    motion_trajectory_vmd_dir_path = get_dir_path(base_file_path)
+    # モーションVMDファイル名・拡張子
+    motion_trajectory_vmd_file_name, motion_trajectory_vmd_ext = os.path.splitext(os.path.basename(base_file_path))
+
+    # 出力ファイルパス生成
+    new_output_trajectory_pmx_path = os.path.join(
+        motion_trajectory_vmd_dir_path,
+        "{0}_T_{1:%Y%m%d_%H%M%S}{2}".format(motion_trajectory_vmd_file_name, datetime.now(), ".pmx"),
+    )
+
+    # ファイルパス自体が変更されたか、自動生成ルールに則っている場合、ファイルパス変更
+    if is_force or is_auto_trajectory_pmx_output_path(
+        output_trajectory_pmx_path,
+        motion_trajectory_vmd_dir_path,
+        motion_trajectory_vmd_file_name,
+        ".pmx",
+    ):
+
+        try:
+            open(new_output_trajectory_pmx_path, "w")
+            os.remove(new_output_trajectory_pmx_path)
+        except Exception:
+            logger.warning(
+                "出力ファイルパスの生成に失敗しました。以下の原因が考えられます。\n"
+                + "・ファイルパスが255文字を超えている\n"
+                + '・ファイルパスに使えない文字列が含まれている（例) \\　/　:　*　?　"　<　>　|）'
+                + "・出力ファイルパスの親フォルダに書き込み権限がない"
+                + "・出力ファイルパスに書き込み権限がない"
+            )
+
+        return new_output_trajectory_pmx_path
+
+    return output_trajectory_pmx_path
+
+
+# 自動生成ルールに則ったパスか
+def is_auto_trajectory_pmx_output_path(
+    output_trajectory_pmx_path: str,
+    motion_trajectory_vmd_dir_path: str,
+    motion_trajectory_vmd_file_name: str,
+    motion_trajectory_vmd_ext: str,
+):
+    if not output_trajectory_pmx_path:
+        # 出力パスがない場合、置き換え対象
+        return True
+
+    # 新しく設定しようとしている出力ファイルパスの正規表現
+    escaped_motion_trajectory_pmx_file_name = escape_filepath(
+        os.path.join(motion_trajectory_vmd_dir_path, motion_trajectory_vmd_file_name)
+    )
+    escaped_motion_trajectory_pmx_ext = escape_filepath(motion_trajectory_vmd_ext)
+
+    new_output_trajectory_vmd_pattern = re.compile(
+        r"^%s_%s%s%s$"
+        % (
+            escaped_motion_trajectory_pmx_file_name,
+            r"_T_\d{8}_\d{6}",
+            escaped_motion_trajectory_pmx_ext,
+        )
+    )
+
+    # 自動生成ルールに則ったファイルパスである場合、合致あり
+    return re.match(new_output_trajectory_vmd_pattern, output_trajectory_pmx_path) is not None
 
 
 def escape_filepath(path: str):

@@ -11,6 +11,7 @@ from form.panel.MultiJoinPanel import MultiJoinPanel
 from form.panel.ArmIKtoFKPanel import ArmIKtoFKPanel
 from form.panel.ArmTwistOffPanel import ArmTwistOffPanel
 from form.panel.LegFKtoIKPanel import LegFKtoIKPanel
+from form.panel.TrajectoryPanel import TrajectoryPanel
 from form.panel.BlendPanel import BlendPanel
 from form.panel.BezierPanel import BezierPanel
 from form.panel.SmoothPanel import SmoothPanel
@@ -124,8 +125,12 @@ class MainFrame(wx.Frame):
         self.arm_twist_off_panel_ctrl = ArmTwistOffPanel(self, self.note_ctrl, 10)
         self.note_ctrl.AddPage(self.arm_twist_off_panel_ctrl, "捩りOFF", False)
 
+        # 軌跡タブ
+        self.trajectory_panel_ctrl = TrajectoryPanel(self, self.note_ctrl, 11)
+        self.note_ctrl.AddPage(self.trajectory_panel_ctrl, "軌跡", False)
+
         # 補間タブ
-        self.bezier_panel_ctrl = BezierPanel(self, self.note_ctrl, 11)
+        self.bezier_panel_ctrl = BezierPanel(self, self.note_ctrl, 12)
         self.note_ctrl.AddPage(self.bezier_panel_ctrl, "補間", False)
 
         # ---------------------------------------------
