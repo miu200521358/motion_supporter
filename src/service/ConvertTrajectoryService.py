@@ -8,7 +8,7 @@ import traceback
 import shutil
 
 from module.MOptions import MTrajectoryOptions
-from mmd.PmxData import PmxModel, Bone, Vertex, Bdef1, Material, DisplaySlot
+from mmd.PmxData import PmxModel, Bone, Vertex, Bdef1, Material, DisplaySlot, Morph, MaterialMorphData
 from mmd.PmxWriter import PmxWriter
 from module.MParams import BoneLinks
 from module.MMath import MVector2D, MVector3D, MVector4D
@@ -17,6 +17,19 @@ from utils.MLogger import MLogger
 from utils.MException import SizingException
 
 logger = MLogger(__name__, level=1)
+
+# matplotlib > _cm.py > _Set1_data
+set1_data = (
+    np.array([0.89411764705882357, 0.10196078431372549, 0.10980392156862745]),
+    np.array([0.21568627450980393, 0.49411764705882355, 0.72156862745098038]),
+    np.array([0.30196078431372547, 0.68627450980392157, 0.29019607843137257]),
+    np.array([0.59607843137254901, 0.30588235294117649, 0.63921568627450975]),
+    np.array([1.0, 0.49803921568627452, 0.0]),
+    np.array([1.0, 1.0, 0.2]),
+    np.array([0.65098039215686276, 0.33725490196078434, 0.15686274509803921]),
+    np.array([0.96862745098039216, 0.50588235294117645, 0.74901960784313726]),
+    np.array([0.6, 0.6, 0.6]),
+)
 
 
 class ConvertTrajectoryService:
@@ -42,10 +55,10 @@ class ConvertTrajectoryService:
             # 最後に出力
             if result:
                 PmxWriter().write(model, self.options.output_path)
-                shutil.copy(
-                    MFileUtils.resource_path("src/resources/rainbow.png"),
-                    self.options.output_path.replace(os.path.basename(self.options.output_path), "rainbow.png"),
-                )
+                # shutil.copy(
+                #     MFileUtils.resource_path("src/resources/rainbow.png"),
+                #     self.options.output_path.replace(os.path.basename(self.options.output_path), "rainbow.png"),
+                # )
 
                 logger.info(
                     "出力終了: %s",
@@ -123,39 +136,22 @@ class ConvertTrajectoryService:
         model.display_slots["全ての親"].references.append((0, 0))
         model.display_slots["表情"] = DisplaySlot("表情", "Exp", 1, 1)
 
-        model.textures.append("")
-        model.textures.append("rainbow.png")
+        model.display_slots["キーフレ"] = DisplaySlot("キーフレ", "KeyFrame", 0, 0)
 
         WIDTH = 0.1
         NORMAL_VEC = MVector3D(0, 1, 0)
-        ROOT_BDEF1 = Bdef1(0)
 
         motion = self.options.motion
         fnos = sorted(list(motion.bones["センター"].keys()))
 
-        mat_name = "軌跡"
-        model.materials[mat_name] = Material(
-            name=mat_name,
-            english_name=mat_name,
-            diffuse_color=MVector3D(1, 1, 1),
-            alpha=1,
-            specular_factor=0,
-            specular_color=MVector3D(0, 0, 0),
-            ambient_color=MVector3D(0.5, 0.5, 0.5),
-            flag=(0x01),
-            edge_color=MVector4D(0, 0, 0, 0),
-            edge_size=0,
-            texture_index=1,
-            sphere_texture_index=-1,
-            sphere_mode=0,
-            toon_sharing_flag=0,
-            toon_texture_index=0,
-        )
-
         # 色をフレーム数分用意する
-        uvs = np.linspace(0, 1, num=(fnos[-1] + 1))
-        # センターを塗るか(モーキャプで真っ黒になるの対策)
-        is_paint_center = (fnos[-1] / len(fnos)) > 3
+        mat_nums = ceil(fnos[-1] / 100 / (len(set1_data) - 1))
+        colors = np.vstack(
+            [
+                np.linspace(now_cdata, next_cdata, num=mat_nums, axis=0)
+                for now_cdata, next_cdata in zip(set1_data, set1_data[1:])
+            ]
+        )
 
         is_show_on = True
         for fidx, next_fno in enumerate(range(fnos[-1] + 1)):
@@ -167,9 +163,6 @@ class ConvertTrajectoryService:
                 # 非表示だったら描画しない
                 continue
 
-            center_bf = motion.calc_bf("センター", next_fno)
-            groove_bf = motion.calc_bf("グルーブ", next_fno)
-
             # 1Fごとに頂点を生成する
             next_global_3ds = MServiceUtils.calc_global_pos(base_model, target_links, motion, next_fno)
             tail_pos = next_global_3ds["グルーブ"]
@@ -178,16 +171,52 @@ class ConvertTrajectoryService:
                 from_pos = tail_pos.copy()
                 continue
 
-            pidx = 0 if is_paint_center and (center_bf.read or groove_bf.read) else fidx
+            pidx = fidx // 100
+            mat_name = f"{(pidx * 100):04d}F-{((pidx + 1) * 100):04d}F"
+            if mat_name not in model.materials:
+                model.materials[mat_name] = Material(
+                    name=mat_name,
+                    english_name=mat_name,
+                    diffuse_color=MVector3D(*colors[pidx]),
+                    alpha=1,
+                    specular_factor=0,
+                    specular_color=MVector3D(0, 0, 0),
+                    ambient_color=MVector3D(*colors[pidx]) / 2,
+                    flag=(0x01),
+                    edge_color=MVector4D(0, 0, 0, 0),
+                    edge_size=0,
+                    texture_index=-1,
+                    sphere_texture_index=-1,
+                    sphere_mode=0,
+                    toon_sharing_flag=0,
+                    toon_texture_index=-1,
+                )
+                model.materials[mat_name].index = len(model.materials) - 1
+
+                # 該当キーフレ間のボーン生成
+                bone_name = f"{fidx:04d}F"
+                model.bones[bone_name] = Bone(
+                    name=bone_name,
+                    english_name=bone_name,
+                    position=from_pos,
+                    parent_index=0,
+                    layer=0,
+                    flag=(0x0002 | 0x0004 | 0x0008 | 0x0010),
+                    tail_position=MVector3D(0, -1, 0),
+                )
+                model.bones[bone_name].index = len(model.bones) - 1
+                model.display_slots["キーフレ"].references.append((0, model.bones[bone_name].index))
+
+                from_deform = Bdef1(model.bones[bone_name].index)
 
             # FROMからTOまで面を生成
             v1 = Vertex(
                 index=len(model.vertex_dict),
                 position=from_pos,
                 normal=NORMAL_VEC,
-                uv=MVector2D(uvs[pidx], 0.5),
+                uv=MVector2D(),
                 extended_uvs=[],
-                deform=ROOT_BDEF1,
+                deform=from_deform,
                 edge_factor=0,
             )
             model.vertex_dict[v1.index] = v1
@@ -196,9 +225,9 @@ class ConvertTrajectoryService:
                 index=len(model.vertex_dict),
                 position=tail_pos,
                 normal=NORMAL_VEC,
-                uv=MVector2D(uvs[pidx], 0.5),
+                uv=MVector2D(),
                 extended_uvs=[],
-                deform=ROOT_BDEF1,
+                deform=from_deform,
                 edge_factor=0,
             )
             model.vertex_dict[v2.index] = v2
@@ -207,9 +236,9 @@ class ConvertTrajectoryService:
                 index=len(model.vertex_dict),
                 position=from_pos + MVector3D(WIDTH, 0, 0),
                 normal=NORMAL_VEC,
-                uv=MVector2D(uvs[pidx], 0.5),
+                uv=MVector2D(),
                 extended_uvs=[],
-                deform=ROOT_BDEF1,
+                deform=from_deform,
                 edge_factor=0,
             )
             model.vertex_dict[v3.index] = v3
@@ -218,9 +247,9 @@ class ConvertTrajectoryService:
                 index=len(model.vertex_dict),
                 position=tail_pos + MVector3D(WIDTH, 0, 0),
                 normal=NORMAL_VEC,
-                uv=MVector2D(uvs[pidx], 0.5),
+                uv=MVector2D(),
                 extended_uvs=[],
-                deform=ROOT_BDEF1,
+                deform=from_deform,
                 edge_factor=0,
             )
             model.vertex_dict[v4.index] = v4
@@ -229,9 +258,9 @@ class ConvertTrajectoryService:
             #     index=len(model.vertex_dict),
             #     position=from_pos + MVector3D(WIDTH, WIDTH, 0),
             #     normal=NORMAL_VEC,
-            #     uv=MVector2D(uvs[pidx], 0.5),
+            #     uv=MVector2D(),
             #     extended_uvs=[],
-            #     deform=ROOT_BDEF1,
+            #     deform=from_deform,
             #     edge_factor=0,
             # )
             # model.vertex_dict[v5.index] = v5
@@ -240,9 +269,9 @@ class ConvertTrajectoryService:
             #     index=len(model.vertex_dict),
             #     position=tail_pos + MVector3D(WIDTH, WIDTH, 0),
             #     normal=NORMAL_VEC,
-            #     uv=MVector2D(uvs[pidx], 0.5),
+            #     uv=MVector2D(),
             #     extended_uvs=[],
-            #     deform=ROOT_BDEF1,
+            #     deform=from_deform,
             #     edge_factor=0,
             # )
             # model.vertex_dict[v6.index] = v6
@@ -251,9 +280,9 @@ class ConvertTrajectoryService:
             #     index=len(model.vertex_dict),
             #     position=from_pos + MVector3D(0, 0, WIDTH),
             #     normal=NORMAL_VEC,
-            #     uv=MVector2D(uvs[pidx], 0.5),
+            #     uv=MVector2D(),
             #     extended_uvs=[],
-            #     deform=ROOT_BDEF1,
+            #     deform=from_deform,
             #     edge_factor=0,
             # )
             # model.vertex_dict[v7.index] = v7
@@ -262,9 +291,9 @@ class ConvertTrajectoryService:
             #     index=len(model.vertex_dict),
             #     position=tail_pos + MVector3D(0, 0, WIDTH),
             #     normal=NORMAL_VEC,
-            #     uv=MVector2D(uvs[pidx], 0.5),
+            #     uv=MVector2D(),
             #     extended_uvs=[],
-            #     deform=ROOT_BDEF1,
+            #     deform=from_deform,
             #     edge_factor=0,
             # )
             # model.vertex_dict[v8.index] = v8
@@ -284,5 +313,28 @@ class ConvertTrajectoryService:
 
             if fidx % 500 == 0:
                 logger.count(f"【軌跡モデル生成】", next_fno, fnos)
+
+        for mat_idx, mat_name in enumerate(model.materials.keys()):
+            morph = Morph(mat_name, mat_name, 1, 8)
+            morph.index = len(model.org_morphs)
+
+            for midx in range(len(model.materials)):
+                morph.offsets.append(
+                    MaterialMorphData(
+                        midx,
+                        0,
+                        MVector4D(1, 1, 1, (1 if midx == mat_idx else 0)),
+                        MVector3D(1, 1, 1),
+                        0,
+                        MVector3D(1, 1, 1),
+                        MVector4D(),
+                        0,
+                        MVector4D(),
+                        MVector4D(),
+                        MVector4D(),
+                    )
+                )
+
+            model.org_morphs[mat_name] = morph
 
         return True, model
