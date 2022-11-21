@@ -19,14 +19,14 @@ a = Analysis(['src\\executor.py'],
              noarchive=False)
 pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
-a.datas += [('.\\src\\MotionSupporter.ico','.\\src\\MotionSupporter.ico', 'Data')]
+a.datas += [('.\\src\\MotionSupporter.ico','.\\src\\MotionSupporter.ico', 'Data'), ('.\\src\\resources\\rainbow.png','.\\src\\resources\\rainbow.png', 'Data')]
 exe = EXE(pyz,
           a.scripts,
           a.binaries,
           a.zipfiles,
           a.datas,
           [],
-          name='MotionSupporter_1.06_64bit',
+          name='MotionSupporter_1.07_β01_64bit',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
